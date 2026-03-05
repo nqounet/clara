@@ -1,0 +1,22 @@
+[tools]
+node = "latest"
+cargo = "latest"
+rust = "latest"
+
+[tasks."dev"]
+description = "Start the Tauri development server"
+run = "npm run tauri dev"
+
+[tasks."test"]
+description = "Run Rust backend tests"
+dir = "src-tauri"
+run = "cargo test"
+
+[tasks."build:rust"]
+description = "Build the Rust backend"
+dir = "src-tauri"
+run = "cargo build"
+
+[tasks."build"]
+description = "Build the Tauri application"
+run = "npm run tauri build"
