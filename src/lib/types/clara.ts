@@ -35,6 +35,9 @@ export interface ClaraFrontmatter {
   /** 必須: 作成日時 (ISO 8601フォーマット) */
   created_at: string;
   
+  /** 任意: 親Atom（コンテキスト元）へのObsidianリンク。例: ["[[parent-id]]"] */
+  parent: string[];
+
   /** 必須: Obsidianのグラフビューで関係性を明示するためのタグ等。空配列可 */
   tags: string[];
 

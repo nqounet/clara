@@ -21,6 +21,10 @@ pub struct ClaraFrontmatter {
     /// 必須: 作成日時 (ISO 8601フォーマット)
     pub created_at: DateTime<Utc>,
 
+    /// 任意: 親Atom（コンテキスト元）へのObsidianリンク。例: ["[[parent-id]]"]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub parent: Vec<String>,
+
     /// 必須: Obsidianのグラフビューで関係性を明示するためのタグ等。空配列可
     #[serde(default)]
     pub tags: Vec<String>,

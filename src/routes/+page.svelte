@@ -31,6 +31,13 @@
   let recentAtoms: ClaraFrontmatter[] = [];
   let isLoadingRecent = false;
 
+  // Search
+  let searchQuery = "";
+  let searchResults: ClaraFrontmatter[] = [];
+  let isSearching = false;
+  let hasSearched = false;
+  let searchError = "";
+
   // Font size for textarea
   let fontSize = 16;
 
@@ -142,6 +149,7 @@
       lastAtom = null;
       prompt = "";
       errorMsg = "";
+      clearSearch();
       await fetchRecentAtoms();
 
       setTimeout(() => { vaultMsg = ""; closeModalSilent(); }, 1500);
@@ -210,6 +218,39 @@
     }
   }
 
+  async function handleSearch() {
+    const q = searchQuery.trim();
+    if (!q || isSearching) return;
+    isSearching = true;
+    hasSearched = true;
+    searchResults = [];
+    searchError = "";
+    try {
+      searchResults = await invoke<ClaraFrontmatter[]>("search_vault", { query: q });
+    } catch (e) {
+      console.error("検索に失敗しました", e);
+      searchError = String(e);
+    } finally {
+      isSearching = false;
+    }
+  }
+
+  function clearSearch() {
+    searchQuery = "";
+    searchResults = [];
+    hasSearched = false;
+    searchError = "";
+  }
+
+  function handleSearchKeydown(e: KeyboardEvent) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleSearch();
+    } else if (e.key === "Escape") {
+      clearSearch();
+    }
+  }
+
   function handleKeydown(e: KeyboardEvent) {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
       e.preventDefault();
@@ -226,23 +267,66 @@
       <div class="vault-hint">クリックして変更</div>
     </div>
 
+    <div class="search-section">
+      <div class="search-bar">
+        <input
+          type="text"
+          bind:value={searchQuery}
+          on:keydown={handleSearchKeydown}
+          placeholder="Vaultを検索..."
+          disabled={isSearching}
+        />
+        {#if searchQuery || hasSearched}
+          <button class="search-clear-btn" on:click={clearSearch} title="検索をクリア">✕</button>
+        {/if}
+        <button class="search-exec-btn" on:click={handleSearch} disabled={isSearching || !searchQuery.trim()} title="検索">🔍</button>
+      </div>
+      {#if isSearching}
+        <p class="search-status">検索中...</p>
+      {/if}
+      {#if searchError}
+        <p class="search-error">{searchError}</p>
+      {/if}
+    </div>
+
     <div class="atom-list-section">
-      <h3>過去の思考 (Atom)</h3>
-      {#if isLoadingRecent}
-        <p class="empty-msg">読み込み中...</p>
-      {:else if recentAtoms.length === 0}
-        <p class="empty-msg">まだ履歴がありません</p>
+      {#if hasSearched}
+        <h3>検索結果 ({searchResults.length}件)</h3>
+        {#if searchResults.length === 0 && !isSearching}
+          <p class="empty-msg">一致するAtomが見つかりませんでした</p>
+        {:else}
+          <ul class="recent-list">
+            {#each searchResults as atom}
+              <li>
+                <button class="atom-btn" class:atom-btn-active={lastAtom?.frontmatter.id === atom.id} on:click={() => loadAtom(atom.id)}>
+                  <span class="atom-title">{atom.title}</span>
+                  {#if atom.description}
+                    <span class="atom-desc">{atom.description}</span>
+                  {/if}
+                  <span class="atom-id">{atom.id.split('-')[0]}</span>
+                </button>
+              </li>
+            {/each}
+          </ul>
+        {/if}
       {:else}
-        <ul class="recent-list">
-          {#each recentAtoms as atom}
-            <li>
-              <button class="atom-btn" class:atom-btn-active={lastAtom?.frontmatter.id === atom.id} on:click={() => loadAtom(atom.id)}>
-                <span class="atom-title">{atom.title}</span>
-                <span class="atom-id">{atom.id.split('-')[0]}</span>
-              </button>
-            </li>
-          {/each}
-        </ul>
+        <h3>過去の思考 (Atom)</h3>
+        {#if isLoadingRecent}
+          <p class="empty-msg">読み込み中...</p>
+        {:else if recentAtoms.length === 0}
+          <p class="empty-msg">まだ履歴がありません</p>
+        {:else}
+          <ul class="recent-list">
+            {#each recentAtoms as atom}
+              <li>
+                <button class="atom-btn" class:atom-btn-active={lastAtom?.frontmatter.id === atom.id} on:click={() => loadAtom(atom.id)}>
+                  <span class="atom-title">{atom.title}</span>
+                  <span class="atom-id">{atom.id.split('-')[0]}</span>
+                </button>
+              </li>
+            {/each}
+          </ul>
+        {/if}
       {/if}
     </div>
   </aside>
@@ -532,6 +616,81 @@
     color: #0366d6;
   }
 
+  .search-section {
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid #ddd;
+  }
+
+  .search-bar {
+    display: flex;
+    gap: 0.3rem;
+  }
+
+  .search-bar input {
+    flex: 1;
+    padding: 0.35rem 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    box-sizing: border-box;
+  }
+
+  .search-bar input:focus {
+    outline: none;
+    border-color: #0366d6;
+    box-shadow: 0 0 0 2px rgba(3, 102, 214, 0.15);
+  }
+
+  .search-bar input:disabled {
+    background: #e9ecef;
+  }
+
+  .search-exec-btn,
+  .search-clear-btn {
+    background: #e8ebee;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    padding: 0 0.4rem;
+    flex-shrink: 0;
+    width: auto;
+  }
+
+  .search-exec-btn:hover:not(:disabled),
+  .search-clear-btn:hover {
+    background: #ddd;
+  }
+
+  .search-exec-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .search-clear-btn {
+    color: #888;
+  }
+
+  .search-clear-btn:hover {
+    color: #e53e3e;
+    border-color: #e53e3e;
+  }
+
+  .search-status {
+    font-size: 0.7rem;
+    color: #0366d6;
+    margin: 0.3rem 0 0;
+    animation: blink 1.5s infinite;
+  }
+
+  .search-error {
+    font-size: 0.7rem;
+    color: #e53e3e;
+    margin: 0.3rem 0 0;
+    line-height: 1.3;
+    word-break: break-all;
+  }
+
   .atom-list-section {
     flex: 1;
     overflow-y: auto;
@@ -593,6 +752,15 @@
   .atom-id {
     font-size: 0.65rem;
     color: #999;
+  }
+
+  .atom-desc {
+    font-size: 0.7rem;
+    color: #666;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
   }
 
   .empty-msg {

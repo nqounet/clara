@@ -20,7 +20,8 @@ pub fn run() {
             core::get_clara_config,
             core::update_clara_config,
             core::list_recent_atoms,
-            core::load_atom
+            core::load_atom,
+            core::search_skr
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

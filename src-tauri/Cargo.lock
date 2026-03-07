@@ -445,7 +445,7 @@ dependencies = [
 
 [[package]]
 name = "clara"
-version = "0.2.0"
+version = "0.2.3"
 dependencies = [
  "chrono",
  "dirs 5.0.1",

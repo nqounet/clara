@@ -1,7 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "CLARA",
-  "version": "0.2.0",
   "identifier": "net.nqou.clara",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -13,8 +12,8 @@
     "windows": [
       {
         "title": "CLARA",
-        "width": 800,
-        "height": 600
+        "width": 1200,
+        "height": 800
       }
     ],
     "security": {
