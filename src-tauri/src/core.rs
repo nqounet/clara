@@ -564,16 +564,12 @@ pub async fn create_and_send_prompt(
 pub async fn search_skr(query: String) -> Result<Vec<SkrSearchResult>, String> {
     let (_, config) = init_workspace().map_err(|e| e.to_string())?;
 
-    // 検索用の設定（--search フラグを --prompt フラグに変更）
-    let mut search_config = config.clone();
-    search_config.cli_args.push("--prompt".to_string());
-
     // 検索プロンプトの構築（出力フォーマットの指示を含む）
     let system_instruction = "Search the Semantic Knowledge Repository (SKR) for the following query.\nYou MUST format each search result exactly as follows:\n\nID: [id]\nTITLE: [title]\nSCORE: [relevance score]\nSNIPPET: [short snippet]\n\nQuery: ";
     let full_prompt = format!("{}{}", system_instruction, query);
 
     // CLIツールを実行
-    let raw_output = execute_cli(&full_prompt, &search_config, false)?;
+    let raw_output = execute_cli(&full_prompt, &config, false)?;
 
     // 結果をパース
     Ok(parse_skr_results(&raw_output))
