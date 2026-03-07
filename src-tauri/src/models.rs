@@ -24,6 +24,18 @@ pub struct ClaraFrontmatter {
     /// 必須: Obsidianのグラフビューで関係性を明示するためのタグ等。空配列可
     #[serde(default)]
     pub tags: Vec<String>,
+
+    /// 任意: 使用したCLIコマンド名（例: gemini）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cli_command: Option<String>,
+
+    /// 任意: 使用したモデル名（例: gemini-2.5-pro）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
+
+    /// 任意: 実行時の作業ディレクトリ（Workspace）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub workspace: Option<String>,
 }
 
 /// アプリケーション内で1つのノード（やり取りのセット）として扱うための型

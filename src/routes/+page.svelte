@@ -1,14 +1,184 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
-  import type { ClaraSet } from "$lib/types/clara";
+  import { open as openDialog } from "@tauri-apps/plugin-dialog";
+  import { onMount, onDestroy } from "svelte";
+  import type { ClaraSet, ClaraFrontmatter, AppConfig, ClaraConfig } from "$lib/types/clara";
 
   let prompt = "";
   let isSending = false;
   let errorMsg = "";
   let lastSet: ClaraSet | null = null;
+  let yoloMode = false;
+
+  // Modal management
+  type ModalKey = 'vault' | 'workspace' | 'cli' | 'model';
+  let activeModal: ModalKey | null = null;
+
+  // ClaraConfig settings
+  let cliCommand = "gemini";
+  let cliModel = "";
+  let cliWorkingDir = "";
+  let claraSettingsMsg = "";
+  let claraSettingsMsgIsError = false;
+
+  // Vault Settings
+  let rootDir = "";
+  let vaultMsg = "";
+  let isVaultMsgError = false;
+
+  // Sidebar (Recent Atoms)
+  let recentAtoms: ClaraFrontmatter[] = [];
+  let isLoadingRecent = false;
+
+  // Font size for textarea
+  let fontSize = 16;
+
+  // 保存中フラグ（連打防止）
+  let isSaving = false;
+
+  onMount(async () => {
+    try {
+      const [appConfig, claraConfig] = await Promise.all([
+        invoke<AppConfig>("get_app_config"),
+        invoke<ClaraConfig>("get_clara_config"),
+      ]);
+      rootDir = appConfig.root_dir;
+      cliCommand = claraConfig.cli_command ?? "gemini";
+      cliModel = claraConfig.model ?? "";
+      cliWorkingDir = claraConfig.working_dir ?? "";
+      await fetchRecentAtoms();
+    } catch (e) {
+      console.error("初期化に失敗しました", e);
+    }
+  });
+
+  // グローバルEscapeキーでモーダルを閉じる
+  function handleGlobalKeydown(e: KeyboardEvent) {
+    if (e.key === 'Escape' && activeModal) closeModal();
+  }
+  onMount(() => {
+    document.addEventListener('keydown', handleGlobalKeydown);
+  });
+  onDestroy(() => {
+    if (typeof document !== 'undefined') {
+      document.removeEventListener('keydown', handleGlobalKeydown);
+    }
+  });
+
+  function openModal(key: ModalKey) {
+    if (isSending) return;
+    activeModal = key;
+  }
+
+  function closeModal() {
+    activeModal = null;
+    // メッセージ状態をクリアして他モーダルへの漏れを防止
+    claraSettingsMsg = "";
+    claraSettingsMsgIsError = false;
+    vaultMsg = "";
+    isVaultMsgError = false;
+  }
+
+  /** タイマー経由で閉じる場合はメッセージをクリアしない（保存成功表示を保持） */
+  function closeModalSilent() {
+    activeModal = null;
+  }
+
+  function handleModalKeydown(e: KeyboardEvent) {
+    if (e.key === 'Escape') closeModal();
+  }
+
+  async function pickFolder(): Promise<string | null> {
+    const selected = await openDialog({ directory: true, multiple: false });
+    return typeof selected === "string" ? selected : null;
+  }
+
+  async function pickVaultDir() {
+    const path = await pickFolder();
+    if (path) rootDir = path;
+  }
+
+  async function pickWorkspaceDir() {
+    const path = await pickFolder();
+    if (path) cliWorkingDir = path;
+  }
+
+  async function fetchRecentAtoms() {
+    isLoadingRecent = true;
+    try {
+      recentAtoms = await invoke("list_recent_atoms", { limit: 10 });
+    } catch (e) {
+      console.error("履歴の取得に失敗しました", e);
+    } finally {
+      isLoadingRecent = false;
+    }
+  }
+
+  async function loadAtom(id: string) {
+    try {
+      lastSet = await invoke("load_atom", { id });
+      const scrollArea = document.querySelector('.scroll-area');
+      if (scrollArea) scrollArea.scrollTop = 0;
+    } catch (e) {
+      errorMsg = `読み込みエラー: ${e}`;
+    }
+  }
+
+  function clearContext() {
+    lastSet = null;
+  }
+
+  async function handleUpdateRootDir() {
+    if (isSaving) return;
+    isSaving = true;
+    try {
+      vaultMsg = "切り替え中...";
+      isVaultMsgError = false;
+      const config = await invoke<AppConfig>("update_root_dir", { newPath: rootDir });
+      rootDir = config.root_dir;
+      vaultMsg = "✓ Vaultを切り替えました";
+
+      lastSet = null;
+      prompt = "";
+      errorMsg = "";
+      await fetchRecentAtoms();
+
+      setTimeout(() => { vaultMsg = ""; closeModalSilent(); }, 1500);
+    } catch (e) {
+      isVaultMsgError = true;
+      vaultMsg = String(e);
+    } finally {
+      isSaving = false;
+    }
+  }
+
+  async function handleUpdateClaraConfig() {
+    if (isSaving) return;
+    isSaving = true;
+    try {
+      claraSettingsMsgIsError = false;
+      claraSettingsMsg = "保存中...";
+      const updated = await invoke<ClaraConfig>("update_clara_config", {
+        cliCommand,
+        model: cliModel.trim() || null,
+        workingDir: cliWorkingDir.trim() || null,
+      });
+      cliCommand = updated.cli_command;
+      cliModel = updated.model ?? "";
+      cliWorkingDir = updated.working_dir ?? "";
+      claraSettingsMsg = "✓ 保存しました";
+      setTimeout(() => { claraSettingsMsg = ""; closeModalSilent(); }, 1500);
+    } catch (e) {
+      claraSettingsMsgIsError = true;
+      claraSettingsMsg = String(e);
+    } finally {
+      isSaving = false;
+    }
+  }
 
   async function handleSend() {
-    if (!prompt.trim() || isSending) {
+    if (isSending) return;
+    if (!prompt.trim()) {
       errorMsg = "プロンプトは必須です。";
       return;
     }
@@ -18,12 +188,16 @@
 
     try {
       const result: ClaraSet = await invoke("create_and_send_prompt", {
-        description: null, // 将来的に入力欄を追加予定
+        description: null,
         prompt: prompt.trim(),
-        parentId: lastSet?.frontmatter.id || null, // 現在は直前のIDを親として送信
+        parentId: lastSet?.frontmatter.id || null,
+        yolo: yoloMode,
       });
       lastSet = result;
-      prompt = ""; // プロンプトをクリアして次を入力しやすくする
+      prompt = "";
+      await fetchRecentAtoms();
+      const scrollArea = document.querySelector('.scroll-area');
+      if (scrollArea) scrollArea.scrollTop = 0;
     } catch (e) {
       errorMsg = String(e);
     } finally {
@@ -32,129 +206,657 @@
   }
 
   function handleKeydown(e: KeyboardEvent) {
-    // Cmd + Enter (Mac) または Ctrl + Enter (Windows/Linux) で送信
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-      e.preventDefault(); // デフォルトの改行を防ぐ
+      e.preventDefault();
       handleSend();
     }
   }
 </script>
 
-<main class="container">
-  <h1>CLARA (開発版)</h1>
-
-  <div class="input-area">
-    <div class="field">
-      <label for="prompt">プロンプト (Cmd + Enter で送信)</label>
-      <textarea
-        id="prompt"
-        rows="5"
-        bind:value={prompt}
-        on:keydown={handleKeydown}
-        placeholder="AIに聞きたいことを入力してください..."
-      ></textarea>
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="vault-header" role="button" tabindex="0" on:click={() => openModal('vault')} on:keydown={(e) => e.key === 'Enter' && openModal('vault')}>
+      <div class="vault-label">📁 Vault</div>
+      <div class="vault-path" title={rootDir}>{rootDir || "読み込み中..."}</div>
+      <div class="vault-hint">クリックして変更</div>
     </div>
 
-    {#if errorMsg}
-      <p class="error">{errorMsg}</p>
-    {/if}
+    <div class="atom-list-section">
+      <h3>過去の思考 (Atom)</h3>
+      {#if isLoadingRecent}
+        <p class="empty-msg">読み込み中...</p>
+      {:else if recentAtoms.length === 0}
+        <p class="empty-msg">まだ履歴がありません</p>
+      {:else}
+        <ul class="recent-list">
+          {#each recentAtoms as atom}
+            <li>
+              <button class="atom-btn" class:atom-btn-active={lastSet?.frontmatter.id === atom.id} on:click={() => loadAtom(atom.id)}>
+                <span class="atom-title">{atom.title}</span>
+                <span class="atom-id">{atom.id.split('-')[0]}</span>
+              </button>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+    </div>
+  </aside>
 
-    <button on:click={handleSend} disabled={isSending}>
-      {isSending ? "送信中..." : "送信 (Markdownを生成して保存)"}
-    </button>
+  <main class="main-content">
+    <header class="header">
+      <h1>CLARA</h1>
+    </header>
+
+    <div class="scroll-area">
+      {#if lastSet}
+        <div class="atom-detail">
+          {#if lastSet.frontmatter.parent_id}
+            <div class="breadcrumb">
+              🔗 親ノード: <code>{lastSet.frontmatter.parent_id}</code>
+              <button class="nav-btn" on:click={() => loadAtom(lastSet!.frontmatter.parent_id!)}>遡る</button>
+            </div>
+          {/if}
+          <h2>{lastSet.frontmatter.title} <span class="id-text">(ID: {lastSet.frontmatter.id})</span></h2>
+          <div class="created-at">{new Date(lastSet.frontmatter.created_at).toLocaleString('ja-JP')}</div>
+          <div class="tags">
+            {#each lastSet.frontmatter.tags as tag}
+              <span class="tag">#{tag}</span>
+            {/each}
+          </div>
+
+          {#if lastSet.frontmatter.description}
+            <p class="description"><strong>概要:</strong> {lastSet.frontmatter.description}</p>
+          {/if}
+
+          <div class="exec-meta">
+            {#if lastSet.frontmatter.cli_command}
+              <span class="exec-meta-item">⚡ {lastSet.frontmatter.cli_command}</span>
+            {/if}
+            {#if lastSet.frontmatter.model}
+              <span class="exec-meta-item">🤖 {lastSet.frontmatter.model}</span>
+            {/if}
+            {#if lastSet.frontmatter.workspace}
+              <span class="exec-meta-item">📂 {lastSet.frontmatter.workspace}</span>
+            {/if}
+          </div>
+
+          <div class="box">
+            <h3>User</h3>
+            <pre>{lastSet.prompt}</pre>
+          </div>
+          <div class="box">
+            <h3>AI</h3>
+            <pre>{lastSet.response}</pre>
+          </div>
+        </div>
+      {:else}
+        <div class="empty-state">
+          <p>左のリストからAtomを選択するか、新しいメッセージを送信してください</p>
+        </div>
+      {/if}
+    </div>
+
+    <div class="input-area">
+      <button
+        class="workspace-display-btn"
+        class:workspace-empty={!cliWorkingDir}
+        on:click={() => openModal('workspace')}
+      >
+        📂 Workspace:
+        {#if cliWorkingDir}
+          <strong>{cliWorkingDir}</strong>
+          <span class="workspace-hint">クリックして変更</span>
+        {:else}
+          <span class="workspace-unset">未設定</span>
+          <span class="workspace-hint">クリックして設定</span>
+        {/if}
+      </button>
+
+      {#if lastSet}
+        <div class="context-badge">
+          <div class="context-info">
+            <span class="context-label">🔗 リンク先:</span>
+            <span class="context-title">{lastSet.frontmatter.title}</span>
+          </div>
+          <button class="unlink-btn" on:click={clearContext} title="コンテキストリンクを解除して新規として扱う">
+            ✖️ 解除
+          </button>
+        </div>
+      {:else}
+        <div class="context-badge empty-context">
+          <span class="context-label">✨ 新規の独立した思考として開始します</span>
+        </div>
+      {/if}
+
+      <div class="textarea-wrapper">
+        <textarea
+          id="prompt"
+          rows="5"
+          bind:value={prompt}
+          on:keydown={handleKeydown}
+          disabled={isSending}
+          placeholder="AIに聞きたいことを入力してください... (⌘+Enter で送信)"
+          style="font-size: {fontSize}px"
+        ></textarea>
+        <div class="font-controls">
+          <button class="font-btn" on:click={() => fontSize = Math.max(10, fontSize - 2)} title="文字を小さく">A−</button>
+          <span class="font-size-label">{fontSize}px</span>
+          <button class="font-btn" on:click={() => fontSize = Math.min(32, fontSize + 2)} title="文字を大きく">A+</button>
+        </div>
+      </div>
+
+      {#if errorMsg}
+        <p class="error">{errorMsg}</p>
+      {/if}
+
+      <div class="bottom-bar">
+        <div class="cli-info">
+          <button class="cli-info-btn" on:click={() => openModal('cli')} title="CLIコマンドを変更">
+            ⚡ {cliCommand || "gemini"}
+          </button>
+          <button class="cli-info-btn" on:click={() => openModal('model')} title="モデルを変更">
+            🤖 {cliModel || "(デフォルト)"}
+          </button>
+          {#if isSending}
+            <span class="status-indicator">AIが思考中...</span>
+          {/if}
+        </div>
+        <label class="yolo-toggle" class:yolo-active={yoloMode} title="YOLOモード: AIがファイル編集・コマンド実行を確認なしで実行">
+          <input type="checkbox" bind:checked={yoloMode} disabled={isSending} />
+          ⚡ YOLO
+        </label>
+        <button class="send-btn" on:click={handleSend} disabled={isSending}>
+          {isSending ? "..." : "送信"}
+        </button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ═══ Modals ═══ -->
+
+{#if activeModal === 'vault'}
+  <div class="modal-overlay" on:click={closeModal} on:keydown={handleModalKeydown} role="presentation">
+    <div class="modal-body" on:click|stopPropagation on:keydown={() => {}} role="dialog" tabindex="-1" aria-label="Vault設定">
+      <h2>📁 Vault</h2>
+      <p class="modal-desc">Atom を保存する Vault のパスを設定します。変更するとコンテキストはリセットされます。</p>
+      <div class="path-row">
+        <input type="text" bind:value={rootDir} placeholder="~/.clara/atoms" />
+        <button class="pick-btn" on:click={pickVaultDir}>📂</button>
+      </div>
+      {#if vaultMsg}
+        <p class="settings-msg" class:settings-msg-error={isVaultMsgError}>{vaultMsg}</p>
+      {/if}
+      <div class="modal-actions">
+        <button class="modal-cancel" on:click={closeModal}>キャンセル</button>
+        <button class="modal-save" on:click={handleUpdateRootDir} disabled={isSaving}>変更する</button>
+      </div>
+    </div>
   </div>
+{/if}
 
-  {#if lastSet}
-    <div class="result-area">
-      <h2>{lastSet.frontmatter.title} (ID: {lastSet.frontmatter.id})</h2>
-      <div class="box">
-        <h3>User (プロンプト)</h3>
-        <pre>{lastSet.prompt}</pre>
+{#if activeModal === 'workspace'}
+  <div class="modal-overlay" on:click={closeModal} on:keydown={handleModalKeydown} role="presentation">
+    <div class="modal-body" on:click|stopPropagation on:keydown={() => {}} role="dialog" tabindex="-1" aria-label="Workspace設定">
+      <h2>📂 Workspace</h2>
+      <p class="modal-desc">CLIを実行するディレクトリを設定します。空欄にするとCLIのデフォルトが使われます。</p>
+      <div class="path-row">
+        <input type="text" bind:value={cliWorkingDir} placeholder="CLIの作業ディレクトリ" />
+        <button class="pick-btn" on:click={pickWorkspaceDir}>📂</button>
       </div>
-      <div class="box">
-        <h3>AI (回答)</h3>
-        <pre>{lastSet.response}</pre>
+      {#if claraSettingsMsg}
+        <p class="settings-msg" class:settings-msg-error={claraSettingsMsgIsError}>{claraSettingsMsg}</p>
+      {/if}
+      <div class="modal-actions">
+        <button class="modal-clear" on:click={() => { cliWorkingDir = ""; handleUpdateClaraConfig(); }}>クリア</button>
+        <button class="modal-cancel" on:click={closeModal}>キャンセル</button>
+        <button class="modal-save" on:click={handleUpdateClaraConfig} disabled={isSaving}>保存</button>
       </div>
     </div>
-  {/if}
-</main>
+  </div>
+{/if}
+
+{#if activeModal === 'cli'}
+  <div class="modal-overlay" on:click={closeModal} on:keydown={handleModalKeydown} role="presentation">
+    <div class="modal-body" on:click|stopPropagation on:keydown={() => {}} role="dialog" tabindex="-1" aria-label="CLIコマンド設定">
+      <h2>⚡ CLIコマンド</h2>
+      <p class="modal-desc">AIに接続するCLIコマンドを設定します。</p>
+      <input type="text" bind:value={cliCommand} placeholder="例: gemini" />
+      {#if claraSettingsMsg}
+        <p class="settings-msg" class:settings-msg-error={claraSettingsMsgIsError}>{claraSettingsMsg}</p>
+      {/if}
+      <div class="modal-actions">
+        <button class="modal-cancel" on:click={closeModal}>キャンセル</button>
+        <button class="modal-save" on:click={handleUpdateClaraConfig} disabled={isSaving}>保存</button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+{#if activeModal === 'model'}
+  <div class="modal-overlay" on:click={closeModal} on:keydown={handleModalKeydown} role="presentation">
+    <div class="modal-body" on:click|stopPropagation on:keydown={() => {}} role="dialog" tabindex="-1" aria-label="モデル設定">
+      <h2>🤖 モデル</h2>
+      <p class="modal-desc">使用するAIモデルを指定します。空欄にするとCLIのデフォルトモデルが使われます。</p>
+      <input type="text" bind:value={cliModel} placeholder="例: gemini-2.5-pro（空欄=CLIデフォルト）" />
+      {#if claraSettingsMsg}
+        <p class="settings-msg" class:settings-msg-error={claraSettingsMsgIsError}>{claraSettingsMsg}</p>
+      {/if}
+      <div class="modal-actions">
+        <button class="modal-cancel" on:click={closeModal}>キャンセル</button>
+        <button class="modal-save" on:click={handleUpdateClaraConfig} disabled={isSaving}>保存</button>
+      </div>
+    </div>
+  </div>
+{/if}
 
 <style>
-  .container {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 2rem;
-    font-family: sans-serif;
+  :global(body) {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #fff;
   }
 
-  h1 {
-    text-align: center;
+  .app-layout {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 260px;
+    background: #f4f6f8;
+    border-right: 1px solid #ddd;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .vault-header {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #ddd;
+    background: #edf0f3;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .vault-header:hover {
+    background: #e0e5ea;
+  }
+
+  .vault-label {
+    font-size: 0.7rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.2rem;
+  }
+
+  .vault-path {
+    font-size: 0.8rem;
+    color: #333;
+    font-weight: 600;
+    word-break: break-all;
+    margin-bottom: 0.25rem;
+    line-height: 1.3;
+  }
+
+  .vault-hint {
+    font-size: 0.65rem;
+    color: #aaa;
+    transition: color 0.15s;
+  }
+
+  .vault-header:hover .vault-hint {
+    color: #0366d6;
+  }
+
+  .atom-list-section {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.75rem 1rem;
+  }
+
+  .atom-list-section h3 {
+    margin: 0 0 0.5rem;
+    font-size: 0.85rem;
+    color: #555;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 0.4rem;
+  }
+
+  .recent-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .recent-list li {
+    margin-bottom: 0.35rem;
+  }
+
+  .atom-btn {
+    width: 100%;
+    text-align: left;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 0.4rem 0.5rem;
+    cursor: pointer;
+    transition: background 0.15s;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .atom-btn:hover {
+    background: #e1ecf4;
+    border-color: #0366d6;
+  }
+
+  .atom-btn-active {
+    background: #e1ecf4;
+    border-color: #0366d6;
+    border-left: 3px solid #0366d6;
+  }
+
+  .atom-title {
+    font-weight: 600;
+    font-size: 0.8rem;
+    color: #333;
+    margin-bottom: 0.1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .atom-id {
+    font-size: 0.65rem;
+    color: #999;
+  }
+
+  .empty-msg {
+    color: #999;
+    font-size: 0.8rem;
+  }
+
+  /* ── Main content ── */
+  .main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .header {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 1.5rem;
+    border-bottom: 1px solid #eee;
+    flex-shrink: 0;
+  }
+
+  .header h1 {
+    margin: 0;
+    font-size: 1.1rem;
     color: #333;
   }
 
-  .input-area {
-    background: #f9f9f9;
+  /* ── Modal ── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    animation: fadeIn 0.15s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .modal-body {
+    background: #fff;
+    border-radius: 10px;
     padding: 1.5rem;
-    border-radius: 8px;
-    margin-bottom: 2rem;
+    width: 90%;
+    max-width: 420px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+    animation: slideUp 0.2s ease-out;
   }
 
-  .field {
-    margin-bottom: 1rem;
+  @keyframes slideUp {
+    from { transform: translateY(12px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
   }
 
-  label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-weight: bold;
-    color: #555;
+  .modal-body h2 {
+    margin: 0 0 0.5rem;
+    font-size: 1rem;
+    color: #333;
   }
 
-  input,
-  textarea {
+  .modal-desc {
+    font-size: 0.8rem;
+    color: #888;
+    margin: 0 0 0.75rem;
+    line-height: 1.4;
+  }
+
+  .modal-body input[type="text"] {
     width: 100%;
-    padding: 0.5rem;
+    padding: 0.45rem 0.6rem;
     border: 1px solid #ccc;
-    border-radius: 4px;
-    font-family: inherit;
+    border-radius: 6px;
     box-sizing: border-box;
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
   }
 
-  button {
-    background: #007bff;
+  .modal-body input[type="text"]:focus {
+    outline: none;
+    border-color: #0366d6;
+    box-shadow: 0 0 0 2px rgba(3, 102, 214, 0.15);
+  }
+
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+
+  .modal-cancel {
+    background: transparent;
+    border: 1px solid #ccc;
+    color: #666;
+    padding: 0.35rem 0.8rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    width: auto;
+  }
+
+  .modal-cancel:hover {
+    background: #f0f0f0;
+  }
+
+  .modal-save {
+    background: #0366d6;
     color: white;
     border: none;
-    padding: 0.75rem 1.5rem;
-    font-size: 1rem;
-    border-radius: 4px;
+    padding: 0.35rem 0.8rem;
+    border-radius: 6px;
     cursor: pointer;
-    width: 100%;
+    font-size: 0.8rem;
+    width: auto;
   }
 
-  button:disabled {
-    background: #ccc;
+  .modal-save:hover:not(:disabled) {
+    background: #0256b9;
+  }
+
+  .modal-save:disabled {
+    background: #a0c4e8;
     cursor: not-allowed;
   }
 
-  .error {
-    color: red;
-    font-weight: bold;
+  .modal-clear {
+    background: transparent;
+    border: 1px solid #ccc;
+    color: #888;
+    padding: 0.35rem 0.8rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    width: auto;
+    margin-right: auto;
   }
 
-  .result-area {
-    border-top: 2px solid #eee;
-    padding-top: 2rem;
+  .modal-clear:hover {
+    border-color: #e53e3e;
+    color: #e53e3e;
+  }
+
+  .path-row {
+    display: flex;
+    gap: 0.35rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .path-row input {
+    flex: 1;
+    margin-bottom: 0 !important;
+  }
+
+  .pick-btn {
+    background: #e8ebee;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0 0.5rem;
+    flex-shrink: 0;
+  }
+
+  .pick-btn:hover {
+    background: #ddd;
+  }
+
+  .settings-msg {
+    color: #28a745;
+    font-weight: 600;
+    font-size: 0.78rem;
+    margin: 0.35rem 0 0;
+    line-height: 1.4;
+  }
+
+  .settings-msg-error {
+    color: #e53e3e;
+  }
+
+  /* ── Scroll area ── */
+  .scroll-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem 1.5rem;
+  }
+
+  .breadcrumb {
+    font-size: 0.8rem;
+    color: #666;
+    margin-bottom: 0.5rem;
+  }
+
+  .breadcrumb code {
+    font-size: 0.8rem;
+  }
+
+  .nav-btn {
+    background: #e1ecf4;
+    color: #0366d6;
+    border: 1px solid #0366d6;
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 0.7rem;
+    margin-left: 0.5rem;
+    width: auto;
+  }
+
+  .atom-detail h2 {
+    margin: 0 0 0.5rem;
+    font-size: 1.05rem;
+    color: #333;
+  }
+
+  .id-text {
+    font-size: 0.8rem;
+    color: #999;
+    font-weight: normal;
+  }
+
+  .created-at {
+    font-size: 0.75rem;
+    color: #888;
+    margin-bottom: 0.4rem;
+  }
+
+  .tags {
+    margin-bottom: 0.5rem;
+  }
+
+  .tag {
+    display: inline-block;
+    background: #e1ecf4;
+    color: #0366d6;
+    padding: 0.1rem 0.4rem;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    margin-right: 0.3rem;
+  }
+
+  .description {
+    background: #fffbdd;
+    padding: 0.4rem 0.6rem;
+    border-left: 3px solid #f6e05e;
+    font-size: 0.85rem;
+    color: #555;
+    margin-bottom: 0.5rem;
+  }
+
+  .exec-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .exec-meta-item {
+    font-size: 0.7rem;
+    color: #666;
+    background: #f0f0f0;
+    padding: 0.15rem 0.4rem;
+    border-radius: 12px;
+    font-family: monospace;
   }
 
   .box {
-    background: #f1f8ff;
-    padding: 1rem;
+    background: #f8fafb;
+    border: 1px solid #e8edf1;
+    padding: 0.75rem;
     border-radius: 4px;
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
   }
 
   .box h3 {
-    margin-top: 0;
+    margin: 0 0 0.4rem;
+    font-size: 0.85rem;
     color: #0366d6;
   }
 
@@ -162,5 +864,293 @@
     white-space: pre-wrap;
     word-wrap: break-word;
     margin: 0;
+    font-family: monospace;
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+
+  .empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #bbb;
+    font-size: 0.9rem;
+  }
+
+  /* ── Fixed bottom input area ── */
+  .input-area {
+    flex-shrink: 0;
+    border-top: 1px solid #ddd;
+    padding: 0.6rem 1.5rem;
+    background: #fafbfc;
+  }
+
+  .workspace-display-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    font-size: 0.8rem;
+    color: #555;
+    margin-bottom: 0.4rem;
+    padding: 0.3rem 0.5rem;
+    background: #f0f4f8;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s, border-color 0.15s;
+  }
+
+  .workspace-display-btn:hover {
+    background: #e4eaf0;
+    border-color: #ccc;
+  }
+
+  .workspace-display-btn.workspace-empty {
+    color: #aaa;
+    border: 1px dashed #ccc;
+    background: transparent;
+  }
+
+  .workspace-display-btn.workspace-empty:hover {
+    border-color: #0366d6;
+    color: #555;
+  }
+
+  .workspace-unset {
+    color: #aaa;
+    font-style: italic;
+  }
+
+  .workspace-hint {
+    font-size: 0.65rem;
+    color: #aaa;
+    margin-left: auto;
+    padding-left: 0.5rem;
+    flex-shrink: 0;
+    transition: color 0.15s;
+  }
+
+  .workspace-display-btn:hover .workspace-hint {
+    color: #0366d6;
+  }
+
+  .context-badge {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.3rem 0.5rem;
+    background: #e8f4fd;
+    border-radius: 4px;
+    margin-bottom: 0.4rem;
+    font-size: 0.8rem;
+  }
+
+  .context-badge.empty-context {
+    background: #f0f4f8;
+    color: #888;
+  }
+
+  .context-info {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+  }
+
+  .context-label {
+    white-space: nowrap;
+    color: #555;
+  }
+
+  .context-title {
+    font-weight: 600;
+    color: #0366d6;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .unlink-btn {
+    background: transparent;
+    border: 1px solid #ccc;
+    color: #888;
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 0.7rem;
+    white-space: nowrap;
+    width: auto;
+  }
+
+  .unlink-btn:hover {
+    background: #fee;
+    border-color: #e53e3e;
+    color: #e53e3e;
+  }
+
+  .textarea-wrapper {
+    margin-bottom: 0.4rem;
+  }
+
+  .font-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-top: 0.25rem;
+  }
+
+  .font-btn {
+    background: #e8ebee;
+    border: 1px solid #ccc;
+    color: #555;
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 0.7rem;
+    font-weight: 600;
+    width: auto;
+    line-height: 1;
+  }
+
+  .font-btn:hover {
+    background: #ddd;
+  }
+
+  .font-size-label {
+    font-size: 0.65rem;
+    color: #888;
+    min-width: 2.5rem;
+    text-align: center;
+  }
+
+  textarea {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-family: inherit;
+    box-sizing: border-box;
+    resize: vertical;
+    line-height: 1.5;
+  }
+
+  textarea:disabled {
+    background-color: #e9ecef;
+    cursor: not-allowed;
+  }
+
+  .error {
+    color: #e53e3e;
+    font-weight: 600;
+    font-size: 0.8rem;
+    margin: 0.2rem 0;
+  }
+
+  .bottom-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .cli-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .cli-info-btn {
+    font-size: 0.65rem;
+    color: #888;
+    background: #f0f0f0;
+    padding: 0.15rem 0.45rem;
+    border-radius: 12px;
+    font-family: monospace;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    width: auto;
+  }
+
+  .cli-info-btn:hover {
+    background: #e1ecf4;
+    color: #0366d6;
+    border-color: #0366d6;
+  }
+
+  .status-indicator {
+    color: #0366d6;
+    font-size: 0.7rem;
+    animation: blink 1.5s infinite;
+  }
+
+  @keyframes blink {
+    50% { opacity: 0.5; }
+  }
+
+  .send-btn {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 0.3rem 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    width: auto;
+    flex-shrink: 0;
+  }
+
+  .send-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+  }
+
+  .send-btn:hover:not(:disabled) {
+    background: #0069d9;
+  }
+
+  /* ── YOLO toggle ── */
+  .yolo-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.7rem;
+    color: #888;
+    cursor: pointer;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    background: #f8f8f8;
+    white-space: nowrap;
+    transition: all 0.2s;
+    user-select: none;
+    flex-shrink: 0;
+  }
+
+  .yolo-toggle:hover {
+    border-color: #e8a020;
+    color: #b07010;
+  }
+
+  .yolo-toggle.yolo-active {
+    background: #fff3e0;
+    border-color: #f59e0b;
+    color: #d97706;
+    font-weight: 600;
+  }
+
+  .yolo-toggle input[type="checkbox"] {
+    accent-color: #f59e0b;
+    margin: 0;
+    cursor: pointer;
+  }
+
+  .yolo-toggle input[type="checkbox"]:disabled {
+    cursor: not-allowed;
   }
 </style>

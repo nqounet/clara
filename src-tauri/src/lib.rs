@@ -11,9 +11,16 @@ fn greet(name: &str) -> String {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             greet,
-            core::create_and_send_prompt
+            core::create_and_send_prompt,
+            core::get_app_config,
+            core::update_root_dir,
+            core::get_clara_config,
+            core::update_clara_config,
+            core::list_recent_atoms,
+            core::load_atom
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

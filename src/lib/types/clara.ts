@@ -1,6 +1,22 @@
 // src/lib/types/clara.ts
 
 /**
+ * アプリケーションのグローバル設定（Vault Rootの場所を管理）
+ */
+export interface AppConfig {
+  root_dir: string;
+}
+
+/**
+ * CLIツールとLLMの実行設定
+ */
+export interface ClaraConfig {
+  cli_command: string;
+  cli_args: string[];
+  model?: string;
+  working_dir?: string;
+}
+/**
  * 1回のやり取り（セット）を保存するMarkdownのFrontmatter(YAML)部分の定義
  */
 export interface ClaraFrontmatter {
@@ -21,6 +37,15 @@ export interface ClaraFrontmatter {
   
   /** 必須: Obsidianのグラフビューで関係性を明示するためのタグ等。空配列可 */
   tags: string[];
+
+  /** 任意: 使用したCLIコマンド名（例: gemini） */
+  cli_command?: string;
+
+  /** 任意: 使用したモデル名（例: gemini-2.5-pro） */
+  model?: string;
+
+  /** 任意: 実行時の作業ディレクトリ（Workspace） */
+  workspace?: string;
 }
 
 /**
