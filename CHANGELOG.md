@@ -7,11 +7,11 @@
 
 ## [Unreleased]
 
-## [0.2.0] - 2026-03-07
+## [0.2.0] - 2026-03-07T12:43:23+09:00
 
 ### Added
 - プロジェクトの初期化 (Tauri + Svelte + TypeScript)
-- `~/.clara/atomics` へのMarkdown保存機能 (YAML Frontmatter付き)
+- `~/.clara/atoms` へのMarkdown保存機能 (YAML Frontmatter付き)
 - ローカルLLM CLI（`gemini-cli`等）を標準入力から実行・連携するバックエンドロジック (Rust)
 - ユーザープロンプトから `TITLE`, `DESC`, `TAGS` のメタデータを全自動生成する仕組み
 - Markdown内で `~~~~~~user` と `~~~~~~ai` で区切る独自のフォーマット

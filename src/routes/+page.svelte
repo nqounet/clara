@@ -2,12 +2,12 @@
   import { invoke } from "@tauri-apps/api/core";
   import { open as openDialog } from "@tauri-apps/plugin-dialog";
   import { onMount, onDestroy } from "svelte";
-  import type { ClaraSet, ClaraFrontmatter, AppConfig, ClaraConfig } from "$lib/types/clara";
+  import type { ClaraAtom, ClaraFrontmatter, AppConfig, ClaraConfig } from "$lib/types/clara";
 
   let prompt = "";
   let isSending = false;
   let errorMsg = "";
-  let lastSet: ClaraSet | null = null;
+  let lastAtom: ClaraAtom | null = null;
   let yoloMode = false;
   let yoloSentMsg = "";
 
@@ -117,7 +117,7 @@
 
   async function loadAtom(id: string) {
     try {
-      lastSet = await invoke("load_atom", { id });
+      lastAtom = await invoke("load_atom", { id });
       const scrollArea = document.querySelector('.scroll-area');
       if (scrollArea) scrollArea.scrollTop = 0;
     } catch (e) {
@@ -126,7 +126,7 @@
   }
 
   function clearContext() {
-    lastSet = null;
+    lastAtom = null;
   }
 
   async function handleUpdateRootDir() {
@@ -139,7 +139,7 @@
       rootDir = config.root_dir;
       vaultMsg = "✓ Vaultを切り替えました";
 
-      lastSet = null;
+      lastAtom = null;
       prompt = "";
       errorMsg = "";
       await fetchRecentAtoms();
@@ -188,13 +188,13 @@
     errorMsg = "";
 
     try {
-      const result: ClaraSet = await invoke("create_and_send_prompt", {
+      const result: ClaraAtom = await invoke("create_and_send_prompt", {
         description: null,
         prompt: prompt.trim(),
-        parentId: lastSet?.frontmatter.id || null,
+        parentId: lastAtom?.frontmatter.id || null,
         yolo: yoloMode,
       });
-      lastSet = result;
+      lastAtom = result;
       prompt = "";
       if (yoloMode) {
         yoloSentMsg = "🔥 YOLOモードで送信しました。次の送信もYOLOが有効です。";
@@ -236,7 +236,7 @@
         <ul class="recent-list">
           {#each recentAtoms as atom}
             <li>
-              <button class="atom-btn" class:atom-btn-active={lastSet?.frontmatter.id === atom.id} on:click={() => loadAtom(atom.id)}>
+              <button class="atom-btn" class:atom-btn-active={lastAtom?.frontmatter.id === atom.id} on:click={() => loadAtom(atom.id)}>
                 <span class="atom-title">{atom.title}</span>
                 <span class="atom-id">{atom.id.split('-')[0]}</span>
               </button>
@@ -253,48 +253,48 @@
     </header>
 
     <div class="scroll-area">
-      {#if lastSet}
+      {#if lastAtom}
         <div class="atom-detail">
-          {#if lastSet.frontmatter.parent_id}
+          {#if lastAtom.frontmatter.parent_id}
             <div class="breadcrumb">
-              🔗 親ノード: <code>{lastSet.frontmatter.parent_id}</code>
-              <button class="nav-btn" on:click={() => loadAtom(lastSet!.frontmatter.parent_id!)}>遡る</button>
+              🔗 親ノード: <code>{lastAtom.frontmatter.parent_id}</code>
+              <button class="nav-btn" on:click={() => loadAtom(lastAtom!.frontmatter.parent_id!)}>遡る</button>
             </div>
           {/if}
-          <h2>{lastSet.frontmatter.title} <span class="id-text">(ID: {lastSet.frontmatter.id})</span></h2>
-          <div class="created-at">{new Date(lastSet.frontmatter.created_at).toLocaleString('ja-JP')}</div>
+          <h2>{lastAtom.frontmatter.title} <span class="id-text">(ID: {lastAtom.frontmatter.id})</span></h2>
+          <div class="created-at">{new Date(lastAtom.frontmatter.created_at).toLocaleString('ja-JP')}</div>
           <div class="tags">
-            {#each lastSet.frontmatter.tags as tag}
+            {#each lastAtom.frontmatter.tags as tag}
               <span class="tag">#{tag}</span>
             {/each}
           </div>
 
-          {#if lastSet.frontmatter.description}
-            <p class="description"><strong>概要:</strong> {lastSet.frontmatter.description}</p>
+          {#if lastAtom.frontmatter.description}
+            <p class="description"><strong>概要:</strong> {lastAtom.frontmatter.description}</p>
           {/if}
 
           <div class="exec-meta">
-            {#if lastSet.frontmatter.cli_command}
-              <span class="exec-meta-item">⚡ {lastSet.frontmatter.cli_command}</span>
+            {#if lastAtom.frontmatter.cli_command}
+              <span class="exec-meta-item">⚡ {lastAtom.frontmatter.cli_command}</span>
             {/if}
-            {#if lastSet.frontmatter.model}
-              <span class="exec-meta-item">🤖 {lastSet.frontmatter.model}</span>
+            {#if lastAtom.frontmatter.model}
+              <span class="exec-meta-item">🤖 {lastAtom.frontmatter.model}</span>
             {/if}
-            {#if lastSet.frontmatter.workspace}
-              <span class="exec-meta-item">📂 {lastSet.frontmatter.workspace}</span>
+            {#if lastAtom.frontmatter.workspace}
+              <span class="exec-meta-item">📂 {lastAtom.frontmatter.workspace}</span>
             {/if}
-            {#if lastSet.frontmatter.yolo}
+            {#if lastAtom.frontmatter.yolo}
               <span class="exec-meta-item exec-meta-yolo">🔥 YOLO</span>
             {/if}
           </div>
 
           <div class="box">
             <h3>User</h3>
-            <pre>{lastSet.prompt}</pre>
+            <pre>{lastAtom.prompt}</pre>
           </div>
           <div class="box">
             <h3>AI</h3>
-            <pre>{lastSet.response}</pre>
+            <pre>{lastAtom.response}</pre>
           </div>
         </div>
       {:else}
@@ -320,11 +320,11 @@
         {/if}
       </button>
 
-      {#if lastSet}
+      {#if lastAtom}
         <div class="context-badge">
           <div class="context-info">
             <span class="context-label">🔗 リンク先:</span>
-            <span class="context-title">{lastSet.frontmatter.title}</span>
+            <span class="context-title">{lastAtom.frontmatter.title}</span>
           </div>
           <button class="unlink-btn" on:click={clearContext} title="コンテキストリンクを解除して新規として扱う">
             ✖️ 解除

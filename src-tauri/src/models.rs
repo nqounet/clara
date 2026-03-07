@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-/// 1回のやり取り（セット）を保存するMarkdownのFrontmatter(YAML)部分の定義
+/// 1回のやり取り（Atom）を保存するMarkdownのFrontmatter(YAML)部分の定義
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ClaraFrontmatter {
     /// 必須: タイトル（リスト表示用、ファイル名より分かりやすい名前）
@@ -46,9 +46,9 @@ pub fn is_false(v: &bool) -> bool {
     !v
 }
 
-/// アプリケーション内で1つのノード（やり取りのセット）として扱うための型
+/// アプリケーション内で1つのノード（やり取りのAtom）として扱うための型
 #[derive(Debug, Serialize, Deserialize)]
-pub struct ClaraSet {
+pub struct ClaraAtom {
     pub frontmatter: ClaraFrontmatter,
 
     /// ユーザーのプロンプト（送信メッセージ）

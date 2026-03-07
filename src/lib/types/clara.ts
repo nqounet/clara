@@ -17,7 +17,7 @@ export interface ClaraConfig {
   working_dir?: string;
 }
 /**
- * 1回のやり取り（セット）を保存するMarkdownのFrontmatter(YAML)部分の定義
+ * 1回のやり取り（Atom）を保存するMarkdownのFrontmatter(YAML)部分の定義
  */
 export interface ClaraFrontmatter {
   /** 必須: タイトル（リスト表示用、ファイル名より分かりやすい名前） */
@@ -52,9 +52,9 @@ export interface ClaraFrontmatter {
 }
 
 /**
- * アプリケーション内で1つのノード（やり取りのセット）として扱うための型
+ * アプリケーション内で1つのノード（やり取りのAtom）として扱うための型
  */
-export interface ClaraSet {
+export interface ClaraAtom {
   frontmatter: ClaraFrontmatter;
   
   /** ユーザーのプロンプト（送信メッセージ） */

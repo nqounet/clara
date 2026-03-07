@@ -5,7 +5,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
-use crate::models::{ClaraFrontmatter, ClaraSet};
+use crate::models::{ClaraFrontmatter, ClaraAtom};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AppConfig {
@@ -121,7 +121,7 @@ pub fn list_recent_atoms(limit: usize) -> Result<Vec<ClaraFrontmatter>, String> 
 
 /// IDから特定のAtomを読み込む
 #[tauri::command]
-pub fn load_atom(id: String) -> Result<ClaraSet, String> {
+pub fn load_atom(id: String) -> Result<ClaraAtom, String> {
     let app_config = load_app_config().map_err(|e| e.to_string())?;
     let atoms_dir = get_atoms_dir(&app_config.root_dir);
 
@@ -144,7 +144,7 @@ pub fn load_atom(id: String) -> Result<ClaraSet, String> {
                 
                 let (prompt, response) = parse_atom_body(body);
 
-                return Ok(ClaraSet {
+                return Ok(ClaraAtom {
                     frontmatter,
                     prompt,
                     response,
@@ -434,14 +434,14 @@ pub fn parse_ai_response(raw_response: &str) -> ParsedAiResponse {
     }
 }
 
-/// 新しいセットを作成し、Markdownとして保存する
+/// 新しいAtomを作成し、Markdownとして保存する
 #[tauri::command]
 pub async fn create_and_send_prompt(
     description: Option<String>,
     prompt: String,
     parent_id: Option<String>,
     yolo: bool,
-) -> Result<ClaraSet, String> {
+) -> Result<ClaraAtom, String> {
     let (app_config, config) = init_workspace().map_err(|e| e.to_string())?;
 
     // 1. IDの生成 (日時ベース: YYYYMMDDHHMMSS)
@@ -498,7 +498,7 @@ pub async fn create_and_send_prompt(
     fs::write(&file_path, markdown_content).map_err(|e| e.to_string())?;
 
     // 9. 結果をフロントエンドに返す
-    Ok(ClaraSet {
+    Ok(ClaraAtom {
         frontmatter,
         prompt,
         response: parsed.body,
