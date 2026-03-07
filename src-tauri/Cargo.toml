@@ -1,5 +1,5 @@
 [package]
-name = "temp-app"
+name = "clara"
 version = "0.2.0"
 description = "A Tauri App"
 authors = ["you"]

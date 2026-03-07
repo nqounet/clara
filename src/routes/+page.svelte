@@ -221,7 +221,7 @@
 <div class="app-layout">
   <aside class="sidebar">
     <div class="vault-header" role="button" tabindex="0" on:click={() => openModal('vault')} on:keydown={(e) => e.key === 'Enter' && openModal('vault')}>
-      <div class="vault-label">📁 Vault</div>
+      <div class="vault-label">🏛️ Vault</div>
       <div class="vault-path" title={rootDir}>{rootDir || "読み込み中..."}</div>
       <div class="vault-hint">クリックして変更</div>
     </div>
@@ -310,14 +310,15 @@
         class:workspace-empty={!cliWorkingDir}
         on:click={() => openModal('workspace')}
       >
-        📂 Workspace:
-        {#if cliWorkingDir}
-          <strong>{cliWorkingDir}</strong>
-          <span class="workspace-hint">クリックして変更</span>
-        {:else}
-          <span class="workspace-unset">未設定</span>
-          <span class="workspace-hint">クリックして設定</span>
-        {/if}
+        <div class="workspace-label">🖥️ Workspace:</div>
+        <div class="workspace-path">
+          {#if cliWorkingDir}
+            <strong>{cliWorkingDir}</strong>
+          {:else}
+            <span class="workspace-unset">未設定</span>
+          {/if}
+        </div>
+        <div class="workspace-hint">クリックして{#if cliWorkingDir}変更{:else}設定{/if}</div>
       </button>
 
       {#if lastAtom}
@@ -397,7 +398,7 @@
 {#if activeModal === 'vault'}
   <div class="modal-overlay" on:click={closeModal} on:keydown={handleModalKeydown} role="presentation">
     <div class="modal-body" on:click|stopPropagation on:keydown={() => {}} role="dialog" tabindex="-1" aria-label="Vault設定">
-      <h2>📁 Vault</h2>
+      <h2>🏛️ Vault</h2>
       <p class="modal-desc">Atom を保存する Vault のパスを設定します。変更するとコンテキストはリセットされます。</p>
       <div class="path-row">
         <input type="text" bind:value={rootDir} placeholder="~/.clara/atoms" />
@@ -417,7 +418,7 @@
 {#if activeModal === 'workspace'}
   <div class="modal-overlay" on:click={closeModal} on:keydown={handleModalKeydown} role="presentation">
     <div class="modal-body" on:click|stopPropagation on:keydown={() => {}} role="dialog" tabindex="-1" aria-label="Workspace設定">
-      <h2>📂 Workspace</h2>
+      <h2>🖥️ Workspace</h2>
       <p class="modal-desc">CLIを実行するディレクトリを設定します。空欄にするとCLIのデフォルトが使われます。</p>
       <div class="path-row">
         <input type="text" bind:value={cliWorkingDir} placeholder="CLIの作業ディレクトリ" />
@@ -930,13 +931,14 @@
 
   .workspace-display-btn {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.2rem;
     width: 100%;
     font-size: 0.8rem;
     color: #555;
     margin-bottom: 0.4rem;
-    padding: 0.3rem 0.5rem;
+    padding: 0.4rem 0.6rem;
     background: #f0f4f8;
     border-radius: 4px;
     border: 1px solid transparent;
@@ -961,6 +963,15 @@
     color: #555;
   }
 
+  .workspace-label {
+    font-weight: 600;
+    font-size: 0.75rem;
+  }
+
+  .workspace-path {
+    word-break: break-all;
+  }
+
   .workspace-unset {
     color: #aaa;
     font-style: italic;
@@ -969,9 +980,6 @@
   .workspace-hint {
     font-size: 0.65rem;
     color: #aaa;
-    margin-left: auto;
-    padding-left: 0.5rem;
-    flex-shrink: 0;
     transition: color 0.15s;
   }
 

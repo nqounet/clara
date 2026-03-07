@@ -2,9 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-### [0.2.2](https://github.com/nqounet/clara/compare/v0.2.1...v0.2.2) (2026-03-07)
+## [0.2.2] - 2026-03-07T19:40:00+09:00
 
-### [0.2.1](https://github.com/nqounet/clara/compare/v0.2.0...v0.2.1) (2026-03-07)
+### Changed
+- アプリ名を `temp-app` から `CLARA` に変更
+- WorkspaceとVaultのアイコンをそれぞれ `🖥️` と `🏛️` に変更し、UIレイアウトを改善
+- エージェントの自律的なコミット・バージョンアップ操作の要件を見直し、`AGENTS.md` のルールを更新
+
+## [0.2.1] - 2026-03-07T13:07:40+09:00
+
+### Added
+- YOLOモードの実装（エージェントがファイル編集等を自動実行）
+- 設定UIをモーダル化し、Vault・Workspace・CLI・モデル設定を個別に変更可能に改善
+- セマンティックバージョニングと `CHANGELOG.md` 更新プロセスの自動化を `AGENTS.md` に定義
 
 ## [0.2.0] - 2026-03-07T12:43:23+09:00
 
