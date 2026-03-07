@@ -563,7 +563,10 @@ pub async fn create_and_send_prompt(
 /// SKR検索を実行する
 #[tauri::command]
 pub async fn search_skr(query: String) -> Result<Vec<SkrSearchResult>, String> {
-    let (_, config) = init_workspace().map_err(|e| e.to_string())?;
+    let (app_config, clara_config) = init_workspace().map_err(|e| e.to_string())?;
+
+    let mut config = clara_config.clone();
+    config.working_dir = Some(get_atoms_dir(&app_config.root_dir));
 
     // 検索プロンプトの構築（出力フォーマットの指示を含む）
     // IDは、Frontmatterのid（タイムスタンプ-スラグ）を指定するよう指示
