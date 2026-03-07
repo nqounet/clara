@@ -7,6 +7,8 @@
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-03-07
+
 ### Added
 - プロジェクトの初期化 (Tauri + Svelte + TypeScript)
 - `~/.clara/atomics` へのMarkdown保存機能 (YAML Frontmatter付き)
