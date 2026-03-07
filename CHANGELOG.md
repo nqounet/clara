@@ -1,11 +1,8 @@
 # Changelog
 
-すべての注目すべき変更はこのファイルに記録されます。
+All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-このフォーマットは [Keep a Changelog](https://keepachangelog.com/ja/1.0.0/) に基づいており、
-このプロジェクトは [Semantic Versioning](https://semver.org/lang/ja/) に準拠しています。
-
-## [Unreleased]
+### [0.2.1](https://github.com/nqounet/clara/compare/v0.2.0...v0.2.1) (2026-03-07)
 
 ## [0.2.0] - 2026-03-07T12:43:23+09:00
 
