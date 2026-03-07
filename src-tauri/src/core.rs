@@ -434,6 +434,59 @@ pub fn parse_ai_response(raw_response: &str) -> ParsedAiResponse {
     }
 }
 
+/// SKR検索結果
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+pub struct SkrSearchResult {
+    pub id: String,
+    pub title: String,
+    pub score: f32,
+    pub snippet: String,
+}
+
+/// CLIからの検索結果出力をパースする
+pub fn parse_skr_results(output: &str) -> Vec<SkrSearchResult> {
+    let mut results = Vec::new();
+    let mut current_item = None;
+
+    for line in output.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+
+        if trimmed.starts_with("ID:") {
+            if let Some(item) = current_item.take() {
+                results.push(item);
+            }
+            current_item = Some(SkrSearchResult {
+                id: trimmed["ID:".len()..].trim().to_string(),
+                title: "Untitled".to_string(),
+                score: 0.0,
+                snippet: String::new(),
+            });
+        } else if let Some(ref mut item) = current_item {
+            if trimmed.starts_with("TITLE:") {
+                item.title = trimmed["TITLE:".len()..].trim().to_string();
+            } else if trimmed.starts_with("SCORE:") {
+                item.score = trimmed["SCORE:".len()..].trim().parse().unwrap_or(0.0);
+            } else if trimmed.starts_with("SNIPPET:") {
+                item.snippet = trimmed["SNIPPET:".len()..].trim().to_string();
+            } else {
+                if !item.snippet.is_empty() {
+                    item.snippet.push('\n');
+                }
+                item.snippet.push_str(trimmed);
+            }
+        }
+    }
+
+    if let Some(item) = current_item {
+        results.push(item);
+    }
+
+    results
+}
+
 /// 新しいAtomを作成し、Markdownとして保存する
 #[tauri::command]
 pub async fn create_and_send_prompt(
@@ -503,6 +556,22 @@ pub async fn create_and_send_prompt(
         prompt,
         response: parsed.body,
     })
+}
+
+/// SKR検索を実行する
+#[tauri::command]
+pub async fn search_skr(query: String) -> Result<Vec<SkrSearchResult>, String> {
+    let (_, config) = init_workspace().map_err(|e| e.to_string())?;
+
+    // 検索用の設定（--search フラグを付与）
+    let mut search_config = config.clone();
+    search_config.cli_args.push("--search".to_string());
+
+    // CLIツールを実行
+    let raw_output = execute_cli(&query, &search_config, false)?;
+
+    // 結果をパース
+    Ok(parse_skr_results(&raw_output))
 }
 
 #[cfg(test)]
@@ -679,5 +748,29 @@ mod tests {
         };
         let yaml_yolo = serde_yaml::to_string(&fm_yolo).unwrap();
         assert!(yaml_yolo.contains("yolo: true"), "yolo=true のときは YAML に出力されるべき");
+    }
+
+    #[test]
+    fn test_parse_skr_results() {
+        let output = r#"
+ID: 20240307120000-rust-setup
+TITLE: Rust Setup Guide
+SCORE: 0.95
+SNIPPET: How to setup Rust environment with Tauri.
+
+ID: 20240307130000-clara-intro
+TITLE: Introduction to Clara
+SCORE: 0.82
+SNIPPET: Clara is a CLI-based knowledge management tool.
+"#;
+        let results = parse_skr_results(output);
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].id, "20240307120000-rust-setup");
+        assert_eq!(results[0].title, "Rust Setup Guide");
+        assert_eq!(results[0].score, 0.95);
+        assert_eq!(results[0].snippet, "How to setup Rust environment with Tauri.");
+        assert_eq!(results[1].id, "20240307130000-clara-intro");
+        assert_eq!(results[1].title, "Introduction to Clara");
+        assert_eq!(results[1].score, 0.82);
     }
 }
