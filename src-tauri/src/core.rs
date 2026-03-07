@@ -437,6 +437,7 @@ pub fn parse_ai_response(raw_response: &str) -> ParsedAiResponse {
 /// SKR検索結果
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct SkrSearchResult {
+    /// ID (Frontmatterのidと一致し、拡張子抜きのファイル名でもある形式: YYYYMMDDHHMMSS-slug)
     pub id: String,
     pub title: String,
     pub score: f32,
@@ -565,7 +566,8 @@ pub async fn search_skr(query: String) -> Result<Vec<SkrSearchResult>, String> {
     let (_, config) = init_workspace().map_err(|e| e.to_string())?;
 
     // 検索プロンプトの構築（出力フォーマットの指示を含む）
-    let system_instruction = "Search the Semantic Knowledge Repository (SKR) for the following query.\nYou MUST format each search result exactly as follows:\n\nID: [id]\nTITLE: [title]\nSCORE: [relevance score]\nSNIPPET: [short snippet]\n\nQuery: ";
+    // IDは、Frontmatterのid（タイムスタンプ-スラグ）を指定するよう指示
+    let system_instruction = "Search the Semantic Knowledge Repository (SKR) for the following query.\nYou MUST format each search result exactly as follows:\n\nID: [id (filename without extension)]\nTITLE: [title]\nSCORE: [relevance score]\nSNIPPET: [short snippet]\n\nQuery: ";
     let full_prompt = format!("{}{}", system_instruction, query);
 
     // CLIツールを実行

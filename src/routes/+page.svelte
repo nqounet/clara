@@ -303,7 +303,7 @@
                   {#if atom.snippet}
                     <span class="atom-desc">{atom.snippet}</span>
                   {/if}
-                  <span class="atom-id">{atom.id.split('-')[0]}</span>
+                  <span class="atom-id">{atom.id.includes('-') ? atom.id.split('-')[0] : atom.id}</span>
                 </button>
               </li>
             {/each}
@@ -321,7 +321,7 @@
               <li>
                 <button class="atom-btn" class:atom-btn-active={lastAtom?.frontmatter.id === atom.id} on:click={() => loadAtom(atom.id)}>
                   <span class="atom-title">{atom.title}</span>
-                  <span class="atom-id">{atom.id.split('-')[0]}</span>
+                  <span class="atom-id">{atom.id.includes('-') ? atom.id.split('-')[0] : atom.id}</span>
                 </button>
               </li>
             {/each}
