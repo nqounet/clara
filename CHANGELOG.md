@@ -2,6 +2,8 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.3](https://github.com/nqounet/clara/compare/v0.2.2...v0.2.3) (2026-03-07)
+
 ## [0.2.2] - 2026-03-07T19:40:00+09:00
 
 ### Changed
