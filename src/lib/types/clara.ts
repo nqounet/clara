@@ -66,3 +66,13 @@ export interface ClaraAtom {
   /** AIからの回答 */
   response: string;
 }
+
+/**
+ * SKR検索の結果を表す型
+ */
+export interface SkrSearchResult {
+  id: string;
+  title: string;
+  score: number;
+  snippet: string;
+}

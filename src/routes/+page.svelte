@@ -2,7 +2,7 @@
   import { invoke } from "@tauri-apps/api/core";
   import { open as openDialog } from "@tauri-apps/plugin-dialog";
   import { onMount, onDestroy } from "svelte";
-  import type { ClaraAtom, ClaraFrontmatter, AppConfig, ClaraConfig } from "$lib/types/clara";
+  import type { ClaraAtom, ClaraFrontmatter, AppConfig, ClaraConfig, SkrSearchResult } from "$lib/types/clara";
 
   let prompt = "";
   let isSending = false;
@@ -33,7 +33,7 @@
 
   // Search
   let searchQuery = "";
-  let searchResults: ClaraFrontmatter[] = [];
+  let searchResults: SkrSearchResult[] = [];
   let isSearching = false;
   let hasSearched = false;
   let searchError = "";
@@ -226,7 +226,7 @@
     searchResults = [];
     searchError = "";
     try {
-      searchResults = await invoke<ClaraFrontmatter[]>("search_vault", { query: q });
+      searchResults = await invoke<SkrSearchResult[]>("search_skr", { query: q });
     } catch (e) {
       console.error("検索に失敗しました", e);
       searchError = String(e);
@@ -300,8 +300,8 @@
               <li>
                 <button class="atom-btn" class:atom-btn-active={lastAtom?.frontmatter.id === atom.id} on:click={() => loadAtom(atom.id)}>
                   <span class="atom-title">{atom.title}</span>
-                  {#if atom.description}
-                    <span class="atom-desc">{atom.description}</span>
+                  {#if atom.snippet}
+                    <span class="atom-desc">{atom.snippet}</span>
                   {/if}
                   <span class="atom-id">{atom.id.split('-')[0]}</span>
                 </button>
