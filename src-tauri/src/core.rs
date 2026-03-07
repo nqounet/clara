@@ -473,6 +473,7 @@ pub async fn create_and_send_prompt(
         cli_command: Some(config.cli_command.clone()),
         model: config.model.clone(),
         workspace: config.working_dir.as_ref().map(|p| p.to_string_lossy().into_owned()),
+        yolo,
     };
 
     // 7. Markdownファイルのフォーマット構築
@@ -645,5 +646,38 @@ mod tests {
         let path = get_global_settings_path();
         assert!(path.to_string_lossy().contains("clara") || path.to_string_lossy().contains("Clara"));
         assert!(path.ends_with("settings.json"));
+    }
+
+    #[test]
+    fn test_frontmatter_yolo_serialization() {
+        use crate::models::{is_false, ClaraFrontmatter};
+
+        // is_false ヘルパーの基本動作テスト
+        assert!(is_false(&false));
+        assert!(!is_false(&true));
+
+        // yolo=false のとき、YAMLに "yolo" が含まれないこと
+        let fm = ClaraFrontmatter {
+            title: "Test".into(),
+            description: None,
+            id: "test-id".into(),
+            parent_id: None,
+            created_at: Utc::now(),
+            tags: vec![],
+            cli_command: None,
+            model: None,
+            workspace: None,
+            yolo: false,
+        };
+        let yaml = serde_yaml::to_string(&fm).unwrap();
+        assert!(!yaml.contains("yolo"), "yolo=false のときは YAML に含まれるべきではない");
+
+        // yolo=true のとき、YAMLに "yolo: true" が含まれること
+        let fm_yolo = ClaraFrontmatter {
+            yolo: true,
+            ..fm
+        };
+        let yaml_yolo = serde_yaml::to_string(&fm_yolo).unwrap();
+        assert!(yaml_yolo.contains("yolo: true"), "yolo=true のときは YAML に出力されるべき");
     }
 }

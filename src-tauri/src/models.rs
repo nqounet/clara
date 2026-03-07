@@ -36,6 +36,14 @@ pub struct ClaraFrontmatter {
     /// 任意: 実行時の作業ディレクトリ（Workspace）
     #[serde(skip_serializing_if = "Option::is_none")]
     pub workspace: Option<String>,
+
+    /// 任意: YOLOモード（ツール自動実行）で実行されたかどうか
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub yolo: bool,
+}
+
+pub fn is_false(v: &bool) -> bool {
+    !v
 }
 
 /// アプリケーション内で1つのノード（やり取りのセット）として扱うための型

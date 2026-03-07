@@ -9,6 +9,7 @@
   let errorMsg = "";
   let lastSet: ClaraSet | null = null;
   let yoloMode = false;
+  let yoloSentMsg = "";
 
   // Modal management
   type ModalKey = 'vault' | 'workspace' | 'cli' | 'model';
@@ -195,6 +196,10 @@
       });
       lastSet = result;
       prompt = "";
+      if (yoloMode) {
+        yoloSentMsg = "🔥 YOLOモードで送信しました。次の送信もYOLOが有効です。";
+        setTimeout(() => { yoloSentMsg = ""; }, 4000);
+      }
       await fetchRecentAtoms();
       const scrollArea = document.querySelector('.scroll-area');
       if (scrollArea) scrollArea.scrollTop = 0;
@@ -278,6 +283,9 @@
             {#if lastSet.frontmatter.workspace}
               <span class="exec-meta-item">📂 {lastSet.frontmatter.workspace}</span>
             {/if}
+            {#if lastSet.frontmatter.yolo}
+              <span class="exec-meta-item exec-meta-yolo">🔥 YOLO</span>
+            {/if}
           </div>
 
           <div class="box">
@@ -328,6 +336,12 @@
         </div>
       {/if}
 
+      {#if yoloMode}
+        <div class="yolo-warning-banner">
+          ⚠️ YOLOモード有効: AIがファイル編集・コマンド実行を確認なしで実行します
+        </div>
+      {/if}
+
       <div class="textarea-wrapper">
         <textarea
           id="prompt"
@@ -335,6 +349,7 @@
           bind:value={prompt}
           on:keydown={handleKeydown}
           disabled={isSending}
+          class:textarea-yolo={yoloMode}
           placeholder="AIに聞きたいことを入力してください... (⌘+Enter で送信)"
           style="font-size: {fontSize}px"
         ></textarea>
@@ -349,6 +364,10 @@
         <p class="error">{errorMsg}</p>
       {/if}
 
+      {#if yoloSentMsg}
+        <p class="yolo-sent-msg">{yoloSentMsg}</p>
+      {/if}
+
       <div class="bottom-bar">
         <div class="cli-info">
           <button class="cli-info-btn" on:click={() => openModal('cli')} title="CLIコマンドを変更">
@@ -361,11 +380,11 @@
             <span class="status-indicator">AIが思考中...</span>
           {/if}
         </div>
-        <label class="yolo-toggle" class:yolo-active={yoloMode} title="YOLOモード: AIがファイル編集・コマンド実行を確認なしで実行">
-          <input type="checkbox" bind:checked={yoloMode} disabled={isSending} />
-          ⚡ YOLO
+        <label class="yolo-toggle" class:yolo-active={yoloMode} for="yolo-checkbox" title="YOLOモード: AIがファイル編集・コマンド実行を確認なしで実行">
+          <input id="yolo-checkbox" type="checkbox" bind:checked={yoloMode} disabled={isSending} />
+          {yoloMode ? '🔥' : '🔒'} YOLO
         </label>
-        <button class="send-btn" on:click={handleSend} disabled={isSending}>
+        <button class="send-btn" class:send-btn-yolo={yoloMode} on:click={handleSend} disabled={isSending}>
           {isSending ? "..." : "送信"}
         </button>
       </div>
@@ -846,6 +865,12 @@
     font-family: monospace;
   }
 
+  .exec-meta-yolo {
+    background: #fff3e0;
+    color: #d97706;
+    font-weight: 600;
+  }
+
   .box {
     background: #f8fafb;
     border: 1px solid #e8edf1;
@@ -884,6 +909,23 @@
     border-top: 1px solid #ddd;
     padding: 0.6rem 1.5rem;
     background: #fafbfc;
+  }
+
+  .yolo-warning-banner {
+    background: #fff3e0;
+    border: 1px solid #f59e0b;
+    border-radius: 4px;
+    padding: 0.35rem 0.6rem;
+    font-size: 0.75rem;
+    color: #92400e;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+    animation: yoloPulse 2s ease-in-out infinite;
+  }
+
+  @keyframes yoloPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
   }
 
   .workspace-display-btn {
@@ -1042,11 +1084,29 @@
     cursor: not-allowed;
   }
 
+  textarea.textarea-yolo {
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.15);
+  }
+
   .error {
     color: #e53e3e;
     font-weight: 600;
     font-size: 0.8rem;
     margin: 0.2rem 0;
+  }
+
+  .yolo-sent-msg {
+    color: #d97706;
+    font-weight: 600;
+    font-size: 0.75rem;
+    margin: 0.2rem 0;
+    animation: fadeOut 4s ease-in-out forwards;
+  }
+
+  @keyframes fadeOut {
+    0%, 80% { opacity: 1; }
+    100% { opacity: 0; }
   }
 
   .bottom-bar {
@@ -1112,6 +1172,14 @@
 
   .send-btn:hover:not(:disabled) {
     background: #0069d9;
+  }
+
+  .send-btn-yolo {
+    background: #f59e0b;
+  }
+
+  .send-btn-yolo:hover:not(:disabled) {
+    background: #d97706;
   }
 
   /* ── YOLO toggle ── */

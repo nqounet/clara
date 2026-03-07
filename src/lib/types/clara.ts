@@ -46,6 +46,9 @@ export interface ClaraFrontmatter {
 
   /** 任意: 実行時の作業ディレクトリ（Workspace） */
   workspace?: string;
+
+  /** 任意: YOLOモード（ツール自動実行）で実行されたかどうか */
+  yolo?: boolean;
 }
 
 /**
