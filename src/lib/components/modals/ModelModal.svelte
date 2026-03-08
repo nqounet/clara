@@ -1,18 +1,18 @@
 <script lang="ts">
-  import { claraStore } from "$lib/clara.svelte";
+  import { configStore, uiStore, closeModal } from "$lib/stores";
   import ModalOverlay from "./ModalOverlay.svelte";
 </script>
 
-<ModalOverlay title="モデル" onclose={() => claraStore.closeModal()}>
+<ModalOverlay title="モデル" onclose={() => closeModal()}>
   {#snippet children()}
     <p class="modal-desc">使用するAIモデルを指定します。空欄にするとCLIのデフォルトモデルが使われます。</p>
-    <input type="text" bind:value={claraStore.cliModel} placeholder="例: gemini-2.5-pro（空欄=CLIデフォルト）" />
-    {#if claraStore.claraSettingsMsg}
-      <p class="settings-msg" class:settings-msg-error={claraStore.claraSettingsMsgIsError}>{claraStore.claraSettingsMsg}</p>
+    <input type="text" bind:value={configStore.cliModel} placeholder="例: gemini-2.5-pro（空欄=CLIデフォルト）" />
+    {#if configStore.claraSettingsMsg}
+      <p class="settings-msg" class:settings-msg-error={configStore.claraSettingsMsgIsError}>{configStore.claraSettingsMsg}</p>
     {/if}
     <div class="modal-actions">
-      <button class="modal-cancel" onclick={() => claraStore.closeModal()} type="button">キャンセル</button>
-      <button class="modal-save" onclick={() => claraStore.handleUpdateClaraConfig()} disabled={claraStore.isSaving} type="button">保存</button>
+      <button class="modal-cancel" onclick={() => closeModal()} type="button">キャンセル</button>
+      <button class="modal-save" onclick={() => configStore.handleUpdateClaraConfig(() => uiStore.closeModalSilent())} disabled={configStore.isSaving} type="button">保存</button>
     </div>
   {/snippet}
 </ModalOverlay>

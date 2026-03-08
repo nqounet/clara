@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
-  import { claraStore } from "$lib/clara.svelte";
+  import { uiStore, atomStore, initApp, closeModal } from "$lib/stores";
   import Sidebar from "$lib/components/sidebar/Sidebar.svelte";
   import MainContent from "$lib/components/main/MainContent.svelte";
   import VaultModal from "$lib/components/modals/VaultModal.svelte";
@@ -9,19 +9,19 @@
   import ModelModal from "$lib/components/modals/ModelModal.svelte";
 
   onMount(() => {
-    claraStore.init();
+    initApp();
 
     // グローバルEscapeキーでモーダルを閉じる
     const handleGlobalKeydown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && claraStore.activeModal) {
-        claraStore.closeModal();
+      if (e.key === 'Escape' && uiStore.activeModal) {
+        closeModal();
       }
     };
     document.addEventListener('keydown', handleGlobalKeydown);
 
     return () => {
       document.removeEventListener('keydown', handleGlobalKeydown);
-      claraStore.destroy();
+      atomStore.destroy();
     };
   });
 </script>
@@ -32,13 +32,13 @@
 </div>
 
 <!-- ═══ Modals ═══ -->
-{#if claraStore.activeModal === 'vault'}
+{#if uiStore.activeModal === 'vault'}
   <VaultModal />
-{:else if claraStore.activeModal === 'workspace'}
+{:else if uiStore.activeModal === 'workspace'}
   <WorkspaceModal />
-{:else if claraStore.activeModal === 'cli'}
+{:else if uiStore.activeModal === 'cli'}
   <CliModal />
-{:else if claraStore.activeModal === 'model'}
+{:else if uiStore.activeModal === 'model'}
   <ModelModal />
 {/if}
 

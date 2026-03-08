@@ -1,28 +1,28 @@
 <script lang="ts">
-  import { claraStore } from "$lib/clara.svelte";
+  import { searchStore } from "$lib/stores";
 </script>
 
 <div class="search-section">
-  <form class="search-bar" onsubmit={(e) => { e.preventDefault(); claraStore.handleSearch(); }}>
+  <form class="search-bar" onsubmit={(e) => { e.preventDefault(); searchStore.handleSearch(); }}>
     <input
       type="text"
-      bind:value={claraStore.searchQuery}
-      onkeydown={(e) => claraStore.handleSearchKeydown(e)}
-      oncompositionstart={() => claraStore.handleSearchCompositionStart()}
-      oncompositionend={() => claraStore.handleSearchCompositionEnd()}
+      bind:value={searchStore.searchQuery}
+      onkeydown={(e) => searchStore.handleSearchKeydown(e)}
+      oncompositionstart={() => searchStore.handleSearchCompositionStart()}
+      oncompositionend={() => searchStore.handleSearchCompositionEnd()}
       placeholder="Vaultを検索..."
-      disabled={claraStore.isSearching}
+      disabled={searchStore.isSearching}
     />
-    {#if claraStore.searchQuery || claraStore.hasSearched}
-      <button type="button" class="search-clear-btn" onclick={() => claraStore.clearSearch()} title="検索をクリア">✕</button>
+    {#if searchStore.searchQuery || searchStore.hasSearched}
+      <button type="button" class="search-clear-btn" onclick={() => searchStore.clearSearch()} title="検索をクリア">✕</button>
     {/if}
-    <button type="submit" class="search-exec-btn" disabled={claraStore.isSearching || !claraStore.searchQuery.trim()} title="検索">🔍</button>
+    <button type="submit" class="search-exec-btn" disabled={searchStore.isSearching || !searchStore.searchQuery.trim()} title="検索">🔍</button>
   </form>
-  {#if claraStore.isSearching}
+  {#if searchStore.isSearching}
     <p class="search-status">検索中...</p>
   {/if}
-  {#if claraStore.searchError}
-    <p class="search-error">{claraStore.searchError}</p>
+  {#if searchStore.searchError}
+    <p class="search-error">{searchStore.searchError}</p>
   {/if}
 </div>
 

@@ -1,33 +1,33 @@
 <script lang="ts">
-  import { claraStore } from "$lib/clara.svelte";
+  import { configStore, atomStore, uiStore, handleSend } from "$lib/stores";
 </script>
 
 <div class="bottom-bar">
   <div class="bottom-left">
     <div class="font-controls">
-      <button class="font-btn" onclick={() => claraStore.fontSize = Math.max(10, claraStore.fontSize - 2)} title="文字を小さく">A−</button>
-      <span class="font-size-label">{claraStore.fontSize}px</span>
-      <button class="font-btn" onclick={() => claraStore.fontSize = Math.min(32, claraStore.fontSize + 2)} title="文字を大きく">A+</button>
+      <button class="font-btn" onclick={() => uiStore.fontSize = Math.max(10, uiStore.fontSize - 2)} title="文字を小さく">A−</button>
+      <span class="font-size-label">{uiStore.fontSize}px</span>
+      <button class="font-btn" onclick={() => uiStore.fontSize = Math.min(32, uiStore.fontSize + 2)} title="文字を大きく">A+</button>
     </div>
     <div class="cli-info">
-      <button class="cli-info-btn" onclick={() => claraStore.openModal('cli')} title="CLIコマンドを変更">
-        ⚡ {claraStore.cliCommand || "gemini"}
+      <button class="cli-info-btn" onclick={() => uiStore.openModal('cli')} title="CLIコマンドを変更">
+        ⚡ {configStore.cliCommand || "gemini"}
       </button>
-      <button class="cli-info-btn" onclick={() => claraStore.openModal('model')} title="モデルを変更">
-        🤖 {claraStore.cliModel || "(デフォルト)"}
+      <button class="cli-info-btn" onclick={() => uiStore.openModal('model')} title="モデルを変更">
+        🤖 {configStore.cliModel || "(デフォルト)"}
       </button>
-      {#if claraStore.isSending}
+      {#if atomStore.isSending}
         <span class="status-indicator">AIが思考中...</span>
       {/if}
     </div>
   </div>
   <div class="bottom-right">
-    <label class="yolo-toggle" class:yolo-active={claraStore.yoloMode} for="yolo-checkbox" title="YOLOモード: AIがファイル編集・コマンド実行を確認なしで実行">
-      <input id="yolo-checkbox" type="checkbox" bind:checked={claraStore.yoloMode} disabled={claraStore.isSending} />
-      {claraStore.yoloMode ? '🔥' : '🔒'} YOLO
+    <label class="yolo-toggle" class:yolo-active={configStore.yoloMode} for="yolo-checkbox" title="YOLOモード: AIがファイル編集・コマンド実行を確認なしで実行">
+      <input id="yolo-checkbox" type="checkbox" bind:checked={configStore.yoloMode} disabled={atomStore.isSending} />
+      {configStore.yoloMode ? '🔥' : '🔒'} YOLO
     </label>
-    <button class="send-btn" class:send-btn-yolo={claraStore.yoloMode} onclick={() => claraStore.handleSend()} disabled={claraStore.isSending}>
-      {claraStore.isSending ? "..." : "送信"}
+    <button class="send-btn" class:send-btn-yolo={configStore.yoloMode} onclick={() => handleSend()} disabled={atomStore.isSending}>
+      {atomStore.isSending ? "..." : "送信"}
     </button>
   </div>
 </div>

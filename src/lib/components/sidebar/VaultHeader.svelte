@@ -1,17 +1,17 @@
 <script lang="ts">
-  import { claraStore } from "$lib/clara.svelte";
+  import { configStore, uiStore } from "$lib/stores";
 </script>
 
 <div
   class="vault-header"
   role="button"
   tabindex="0"
-  onclick={() => claraStore.openModal('vault')}
-  onkeydown={(e) => e.key === 'Enter' && claraStore.openModal('vault')}
+  onclick={() => uiStore.openModal('vault')}
+  onkeydown={(e) => e.key === 'Enter' && uiStore.openModal('vault')}
 >
   <div class="vault-label">🏛️ Vault</div>
-  <div class="vault-path" title={claraStore.rootDir}>
-    {claraStore.rootDir || "読み込み中..."}
+  <div class="vault-path" title={configStore.rootDir}>
+    {configStore.rootDir || "読み込み中..."}
   </div>
   <div class="vault-hint">クリックして変更</div>
 </div>

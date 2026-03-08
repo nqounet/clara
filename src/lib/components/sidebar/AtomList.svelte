@@ -1,20 +1,20 @@
 <script lang="ts">
-  import { claraStore } from "$lib/clara.svelte";
+  import { atomStore, searchStore } from "$lib/stores";
 </script>
 
 <div class="atom-list-section">
-  {#if claraStore.hasSearched}
-    <h3>検索結果 ({claraStore.searchResults.length}件)</h3>
-    {#if claraStore.searchResults.length === 0 && !claraStore.isSearching}
+  {#if searchStore.hasSearched}
+    <h3>検索結果 ({searchStore.searchResults.length}件)</h3>
+    {#if searchStore.searchResults.length === 0 && !searchStore.isSearching}
       <p class="empty-msg">一致するAtomが見つかりませんでした</p>
     {:else}
       <ul class="recent-list">
-        {#each claraStore.searchResults as atom}
+        {#each searchStore.searchResults as atom}
           <li>
             <button
               class="atom-btn"
-              class:atom-btn-active={claraStore.lastAtom?.frontmatter.id === atom.id}
-              onclick={() => claraStore.loadAtom(atom.id)}
+              class:atom-btn-active={atomStore.lastAtom?.frontmatter.id === atom.id}
+              onclick={() => atomStore.loadAtom(atom.id)}
             >
               <span class="atom-title">{atom.title}</span>
               {#if atom.snippet}
@@ -28,18 +28,18 @@
     {/if}
   {:else}
     <h3>過去の思考 (Atom)</h3>
-    {#if claraStore.isLoadingRecent}
+    {#if atomStore.isLoadingRecent}
       <p class="empty-msg">読み込み中...</p>
-    {:else if claraStore.recentAtoms.length === 0}
+    {:else if atomStore.recentAtoms.length === 0}
       <p class="empty-msg">まだ履歴がありません</p>
     {:else}
       <ul class="recent-list">
-        {#each claraStore.recentAtoms as atom}
+        {#each atomStore.recentAtoms as atom}
           <li>
             <button
               class="atom-btn"
-              class:atom-btn-active={claraStore.lastAtom?.frontmatter.id === atom.id}
-              onclick={() => claraStore.loadAtom(atom.id)}
+              class:atom-btn-active={atomStore.lastAtom?.frontmatter.id === atom.id}
+              onclick={() => atomStore.loadAtom(atom.id)}
             >
               <span class="atom-title">{atom.title}</span>
               <span class="atom-id">{atom.id.includes('-') ? atom.id.split('-')[0] : atom.id}</span>

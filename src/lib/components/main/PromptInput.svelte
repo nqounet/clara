@@ -1,8 +1,15 @@
 <script lang="ts">
-  import { claraStore } from "$lib/clara.svelte";
+  import { atomStore, configStore, uiStore, handleSend } from "$lib/stores";
+
+  function handleKeydown(e: KeyboardEvent) {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+      e.preventDefault();
+      handleSend();
+    }
+  }
 </script>
 
-{#if claraStore.yoloMode}
+{#if configStore.yoloMode}
   <div class="yolo-warning-banner">
     ⚠️ YOLOモード有効: AIがファイル編集・コマンド実行を確認なしで実行します
   </div>
@@ -12,21 +19,21 @@
   <textarea
     id="prompt"
     rows="5"
-    bind:value={claraStore.prompt}
-    onkeydown={(e) => claraStore.handleKeydown(e)}
-    disabled={claraStore.isSending}
-    class:textarea-yolo={claraStore.yoloMode}
+    bind:value={atomStore.prompt}
+    onkeydown={handleKeydown}
+    disabled={atomStore.isSending}
+    class:textarea-yolo={configStore.yoloMode}
     placeholder="AIに聞きたいことを入力してください... (⌘+Enter で送信)"
-    style="font-size: {claraStore.fontSize}px"
+    style="font-size: {uiStore.fontSize}px"
   ></textarea>
 </div>
 
-{#if claraStore.errorMsg}
-  <p class="error">{claraStore.errorMsg}</p>
+{#if uiStore.errorMsg}
+  <p class="error">{uiStore.errorMsg}</p>
 {/if}
 
-{#if claraStore.yoloSentMsg}
-  <p class="yolo-sent-msg">{claraStore.yoloSentMsg}</p>
+{#if configStore.yoloSentMsg}
+  <p class="yolo-sent-msg">{configStore.yoloSentMsg}</p>
 {/if}
 
 <style>

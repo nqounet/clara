@@ -1,22 +1,22 @@
 <script lang="ts">
-  import { claraStore } from "$lib/clara.svelte";
+  import { configStore, uiStore, closeModal } from "$lib/stores";
   import ModalOverlay from "./ModalOverlay.svelte";
 </script>
 
-<ModalOverlay title="Workspace" onclose={() => claraStore.closeModal()}>
+<ModalOverlay title="Workspace" onclose={() => closeModal()}>
   {#snippet children()}
     <p class="modal-desc">CLIを実行するディレクトリを設定します。空欄にするとCLIのデフォルトが使われます。</p>
     <div class="path-row">
-      <input type="text" bind:value={claraStore.cliWorkingDir} placeholder="CLIの作業ディレクトリ" />
-      <button class="pick-btn" onclick={() => claraStore.pickWorkspaceDir()} type="button">📂</button>
+      <input type="text" bind:value={configStore.cliWorkingDir} placeholder="CLIの作業ディレクトリ" />
+      <button class="pick-btn" onclick={() => configStore.pickWorkspaceDir()} type="button">📂</button>
     </div>
-    {#if claraStore.claraSettingsMsg}
-      <p class="settings-msg" class:settings-msg-error={claraStore.claraSettingsMsgIsError}>{claraStore.claraSettingsMsg}</p>
+    {#if configStore.claraSettingsMsg}
+      <p class="settings-msg" class:settings-msg-error={configStore.claraSettingsMsgIsError}>{configStore.claraSettingsMsg}</p>
     {/if}
     <div class="modal-actions">
-      <button class="modal-clear" onclick={() => claraStore.clearAndSaveWorkspace()} type="button">クリア</button>
-      <button class="modal-cancel" onclick={() => claraStore.closeModal()} type="button">キャンセル</button>
-      <button class="modal-save" onclick={() => claraStore.handleUpdateClaraConfig()} disabled={claraStore.isSaving} type="button">保存</button>
+      <button class="modal-clear" onclick={() => configStore.clearAndSaveWorkspace(() => uiStore.closeModalSilent())} type="button">クリア</button>
+      <button class="modal-cancel" onclick={() => closeModal()} type="button">キャンセル</button>
+      <button class="modal-save" onclick={() => configStore.handleUpdateClaraConfig(() => uiStore.closeModalSilent())} disabled={configStore.isSaving} type="button">保存</button>
     </div>
   {/snippet}
 </ModalOverlay>

@@ -1,30 +1,30 @@
 <script lang="ts">
-  import { claraStore } from "$lib/clara.svelte";
+  import { configStore, closeModal, handleUpdateRootDir } from "$lib/stores";
   import ModalOverlay from "./ModalOverlay.svelte";
 </script>
 
-<ModalOverlay title="Vault" onclose={() => claraStore.closeModal()}>
+<ModalOverlay title="Vault" onclose={() => closeModal()}>
   {#snippet children()}
     <p class="modal-desc">Atom を保存する Vault のパスを設定します。変更するとコンテキストはリセットされます。</p>
     <div class="path-row">
       <input
         type="text"
-        bind:value={claraStore.rootDir}
+        bind:value={configStore.rootDir}
         placeholder="~/.clara/atoms"
       />
-      <button class="pick-btn" onclick={() => claraStore.pickVaultDir()} type="button">📂</button>
+      <button class="pick-btn" onclick={() => configStore.pickVaultDir()} type="button">📂</button>
     </div>
-    {#if claraStore.vaultMsg}
-      <p class="settings-msg" class:settings-msg-error={claraStore.isVaultMsgError}>
-        {claraStore.vaultMsg}
+    {#if configStore.vaultMsg}
+      <p class="settings-msg" class:settings-msg-error={configStore.isVaultMsgError}>
+        {configStore.vaultMsg}
       </p>
     {/if}
     <div class="modal-actions">
-      <button class="modal-cancel" onclick={() => claraStore.closeModal()} type="button">キャンセル</button>
+      <button class="modal-cancel" onclick={() => closeModal()} type="button">キャンセル</button>
       <button
         class="modal-save"
-        onclick={() => claraStore.handleUpdateRootDir()}
-        disabled={claraStore.isSaving}
+        onclick={() => handleUpdateRootDir()}
+        disabled={configStore.isSaving}
         type="button"
       >
         変更する

@@ -5,13 +5,13 @@
   import ContextBadge from "./ContextBadge.svelte";
   import PromptInput from "./PromptInput.svelte";
   import ActionControls from "./ActionControls.svelte";
-  import { claraStore } from "$lib/clara.svelte";
+  import { atomStore } from "$lib/stores";
 
   let scrollArea: HTMLDivElement;
 
   $effect(() => {
     // This effect runs when a new atom is loaded or sent
-    if (claraStore.lastAtom && scrollArea) {
+    if (atomStore.lastAtom && scrollArea) {
       scrollArea.scrollTop = 0;
     }
   });

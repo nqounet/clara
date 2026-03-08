@@ -1,14 +1,14 @@
 <script lang="ts">
-  import { claraStore } from "$lib/clara.svelte";
+  import { atomStore } from "$lib/stores";
 </script>
 
-{#if claraStore.lastAtom}
+{#if atomStore.lastAtom}
   <div class="context-badge">
     <div class="context-info">
       <span class="context-label">🔗 リンク先:</span>
-      <span class="context-title">{claraStore.lastAtom.frontmatter.title}</span>
+      <span class="context-title">{atomStore.lastAtom.frontmatter.title}</span>
     </div>
-    <button class="unlink-btn" onclick={() => claraStore.clearContext()} title="コンテキストリンクを解除して新規として扱う">
+    <button class="unlink-btn" onclick={() => atomStore.clearContext()} title="コンテキストリンクを解除して新規として扱う">
       ✖️ 解除
     </button>
   </div>
