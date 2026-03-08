@@ -1,9 +1,10 @@
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::io::Write;
+use std::io::{BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+use tauri::Emitter;
 
 use crate::models::{ClaraFrontmatter, ClaraAtom};
 
@@ -275,7 +276,12 @@ pub fn init_workspace() -> std::io::Result<(AppConfig, ClaraConfig)> {
 }
 
 /// CLIコマンドにプロンプトを標準入力で渡して実行し、結果を文字列で返す
-pub fn execute_cli(prompt: &str, config: &ClaraConfig, yolo: bool) -> Result<String, String> {
+pub fn execute_cli(
+    window: &tauri::Window,
+    prompt: &str,
+    config: &ClaraConfig,
+    yolo: bool,
+) -> Result<String, String> {
     let mut cmd = Command::new(&config.cli_command);
     cmd.args(&config.cli_args);
 
@@ -312,16 +318,27 @@ pub fn execute_cli(prompt: &str, config: &ClaraConfig, yolo: bool) -> Result<Str
             .map_err(|e| format!("標準入力への書き込みに失敗しました: {}", e))?;
     }
 
-    let output = child
-        .wait_with_output()
-        .map_err(|e| format!("コマンドの実行待ちに失敗しました: {}", e))?;
+    let stdout = child.stdout.take().ok_or("標準出力の取得に失敗しました")?;
+    let mut reader = BufReader::new(stdout);
+    let mut full_output = String::new();
+    let mut line = String::new();
 
-    if output.status.success() {
-        let result = String::from_utf8_lossy(&output.stdout).to_string();
-        Ok(result)
+    while reader.read_line(&mut line).map_err(|e| format!("標準出力の読み込みに失敗しました: {}", e))? > 0 {
+        window.emit("cli-stdout", &line).map_err(|e| format!("イベントの発行に失敗しました: {}", e))?;
+        full_output.push_str(&line);
+        line.clear();
+    }
+
+    let status = child.wait().map_err(|e| format!("コマンドの待機に失敗しました: {}", e))?;
+
+    if status.success() {
+        Ok(full_output)
     } else {
-        let err = String::from_utf8_lossy(&output.stderr).to_string();
-        Err(format!("CLIコマンドがエラーを返しました: {}", err))
+        let mut err_msg = String::new();
+        if let Some(mut stderr) = child.stderr.take() {
+            let _ = stderr.read_to_string(&mut err_msg);
+        }
+        Err(format!("CLIコマンドがエラーを返しました: {}", err_msg))
     }
 }
 
@@ -491,6 +508,7 @@ pub fn parse_skr_results(output: &str) -> Vec<SkrSearchResult> {
 /// 新しいAtomを作成し、Markdownとして保存する
 #[tauri::command]
 pub async fn create_and_send_prompt(
+    window: tauri::Window,
     description: Option<String>,
     prompt: String,
     parent_id: Option<String>,
@@ -507,7 +525,7 @@ pub async fn create_and_send_prompt(
     let full_prompt = format!("{}{}", system_instruction, prompt);
 
     // 3. CLIツールを実行してAIの回答を取得
-    let raw_response = execute_cli(&full_prompt, &config, yolo)?;
+    let raw_response = execute_cli(&window, &full_prompt, &config, yolo)?;
 
     // 4. 回答からメタデータと本文をパース
     let parsed = parse_ai_response(&raw_response);
@@ -562,7 +580,7 @@ pub async fn create_and_send_prompt(
 
 /// SKR検索を実行する
 #[tauri::command]
-pub async fn search_skr(query: String) -> Result<Vec<SkrSearchResult>, String> {
+pub async fn search_skr(window: tauri::Window, query: String) -> Result<Vec<SkrSearchResult>, String> {
     let (app_config, clara_config) = init_workspace().map_err(|e| e.to_string())?;
 
     let mut config = clara_config.clone();
@@ -574,7 +592,7 @@ pub async fn search_skr(query: String) -> Result<Vec<SkrSearchResult>, String> {
     let full_prompt = format!("{}{}", system_instruction, query);
 
     // CLIツールを実行
-    let raw_output = execute_cli(&full_prompt, &config, false)?;
+    let raw_output = execute_cli(&window, &full_prompt, &config, false)?;
 
     // 結果をパース
     Ok(parse_skr_results(&raw_output))

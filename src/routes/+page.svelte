@@ -2,11 +2,13 @@
   import { invoke } from "@tauri-apps/api/core";
   import { getVersion } from "@tauri-apps/api/app";
   import { open as openDialog } from "@tauri-apps/plugin-dialog";
+  import { listen } from "@tauri-apps/api/event";
   import { onMount, onDestroy } from "svelte";
   import type { ClaraAtom, ClaraFrontmatter, AppConfig, ClaraConfig, SkrSearchResult } from "$lib/types/clara";
 
   let prompt = "";
   let isSending = false;
+  let streamingResponse = "";
   let errorMsg = "";
   let lastAtom: ClaraAtom | null = null;
   let yoloMode = false;
@@ -47,6 +49,8 @@
   // 保存中フラグ（連打防止）
   let isSaving = false;
 
+  let unlistenStreaming: (() => void) | null = null;
+
   onMount(async () => {
     try {
       const [appConfig, claraConfig, version] = await Promise.all([
@@ -60,6 +64,12 @@
       cliWorkingDir = claraConfig.working_dir ?? "";
       appVersion = version;
       await fetchRecentAtoms();
+
+      unlistenStreaming = await listen<string>("streaming-response", (event) => {
+        if (isSending) {
+          streamingResponse += event.payload;
+        }
+      });
     } catch (e) {
       console.error("初期化に失敗しました", e);
     }
@@ -76,6 +86,7 @@
     if (typeof document !== 'undefined') {
       document.removeEventListener('keydown', handleGlobalKeydown);
     }
+    if (unlistenStreaming) unlistenStreaming();
   });
 
   function openModal(key: ModalKey) {
@@ -199,6 +210,7 @@
 
     isSending = true;
     errorMsg = "";
+    streamingResponse = "";
 
     try {
       const result: ClaraAtom = await invoke("create_and_send_prompt", {
@@ -350,7 +362,19 @@
     </header>
 
     <div class="scroll-area">
-      {#if lastAtom}
+      {#if isSending}
+        <div class="atom-detail">
+          <div class="breadcrumb">⏳ 応答を生成中...</div>
+          <div class="box">
+            <h3>User</h3>
+            <pre>{prompt}</pre>
+          </div>
+          <div class="box">
+            <h3>AI</h3>
+            <pre>{streamingResponse}</pre>
+          </div>
+        </div>
+      {:else if lastAtom}
         <div class="atom-detail">
           {#if lastAtom.frontmatter.parent_id}
             <div class="breadcrumb">
