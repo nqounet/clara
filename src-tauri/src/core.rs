@@ -570,7 +570,7 @@ pub async fn create_and_send_prompt(
         description: description.or(parsed.description), // ユーザー指定があれば優先
         id: full_id.clone(),
         parent_id: parent_id.clone(),
-        parent: vec![],
+        parent: parent_id.as_ref().map(|pid| format!("[[{}]]", pid)),
         created_at: now,
         tags: parsed.tags,
         cli_command: Some(config.cli_command.clone()),
@@ -785,7 +785,7 @@ mod tests {
             description: None,
             id: "test-id".into(),
             parent_id: None,
-            parent: vec![],
+            parent: None,
             created_at: Utc::now(),
             tags: vec![],
             cli_command: None,
