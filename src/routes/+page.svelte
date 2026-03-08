@@ -258,13 +258,6 @@
     }
   }
 
-  function handleSearchKeyup(e: KeyboardEvent) {
-    if (e.isComposing || isSearchComposing) return;
-    if (e.key === "Enter") {
-      handleSearch();
-    }
-  }
-
   function handleKeydown(e: KeyboardEvent) {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
       e.preventDefault();
@@ -282,22 +275,21 @@
     </div>
 
     <div class="search-section">
-      <div class="search-bar">
+      <form class="search-bar" on:submit|preventDefault={handleSearch}>
         <input
           type="text"
           bind:value={searchQuery}
           on:keydown={handleSearchKeydown}
-          on:keyup={handleSearchKeyup}
           on:compositionstart={handleSearchCompositionStart}
           on:compositionend={handleSearchCompositionEnd}
           placeholder="Vaultを検索..."
           disabled={isSearching}
         />
         {#if searchQuery || hasSearched}
-          <button class="search-clear-btn" on:click={clearSearch} title="検索をクリア">✕</button>
+          <button type="button" class="search-clear-btn" on:click={clearSearch} title="検索をクリア">✕</button>
         {/if}
-        <button class="search-exec-btn" on:click={handleSearch} disabled={isSearching || !searchQuery.trim()} title="検索">🔍</button>
-      </div>
+        <button type="submit" class="search-exec-btn" disabled={isSearching || !searchQuery.trim()} title="検索">🔍</button>
+      </form>
       {#if isSearching}
         <p class="search-status">検索中...</p>
       {/if}
