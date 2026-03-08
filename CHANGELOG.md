@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.2.6] - 2026-03-08T22:30:00+09:00
+
+### Changed
+- Atom（Markdown）生成時に末尾へ付与していた余分な親リンク（`**Parent:** [[id]]`）ブロックを削除（フロントマターで管理されているため）
+
 ## [0.2.5] - 2026-03-08T16:53:59+09:00
 
 ### Added
