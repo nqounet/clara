@@ -1,5 +1,6 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
+  import { getVersion } from "@tauri-apps/api/app";
   import { open as openDialog } from "@tauri-apps/plugin-dialog";
   import { onMount, onDestroy } from "svelte";
   import type { ClaraAtom, ClaraFrontmatter, AppConfig, ClaraConfig, SkrSearchResult } from "$lib/types/clara";
@@ -10,6 +11,7 @@
   let lastAtom: ClaraAtom | null = null;
   let yoloMode = false;
   let yoloSentMsg = "";
+  let appVersion = "";
 
   // Modal management
   type ModalKey = 'vault' | 'workspace' | 'cli' | 'model';
@@ -47,14 +49,16 @@
 
   onMount(async () => {
     try {
-      const [appConfig, claraConfig] = await Promise.all([
+      const [appConfig, claraConfig, version] = await Promise.all([
         invoke<AppConfig>("get_app_config"),
         invoke<ClaraConfig>("get_clara_config"),
+        getVersion(),
       ]);
       rootDir = appConfig.root_dir;
       cliCommand = claraConfig.cli_command ?? "gemini";
       cliModel = claraConfig.model ?? "";
       cliWorkingDir = claraConfig.working_dir ?? "";
+      appVersion = version;
       await fetchRecentAtoms();
     } catch (e) {
       console.error("初期化に失敗しました", e);
@@ -342,7 +346,7 @@
 
   <main class="main-content">
     <header class="header">
-      <h1>CLARA</h1>
+      <h1>CLARA <span class="app-version">v{appVersion}</span></h1>
     </header>
 
     <div class="scroll-area">
@@ -798,6 +802,13 @@
     margin: 0;
     font-size: 1.1rem;
     color: #333;
+  }
+
+  .app-version {
+    font-size: 0.7em;
+    color: #888;
+    font-weight: normal;
+    margin-left: 0.5rem;
   }
 
   /* ── Modal ── */
