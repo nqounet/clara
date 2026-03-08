@@ -253,11 +253,15 @@
 
   function handleSearchKeydown(e: KeyboardEvent) {
     if (e.isComposing || isSearchComposing) return;
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleSearch();
-    } else if (e.key === "Escape") {
+    if (e.key === "Escape") {
       clearSearch();
+    }
+  }
+
+  function handleSearchKeyup(e: KeyboardEvent) {
+    if (e.isComposing || isSearchComposing) return;
+    if (e.key === "Enter") {
+      handleSearch();
     }
   }
 
@@ -283,6 +287,7 @@
           type="text"
           bind:value={searchQuery}
           on:keydown={handleSearchKeydown}
+          on:keyup={handleSearchKeyup}
           on:compositionstart={handleSearchCompositionStart}
           on:compositionend={handleSearchCompositionEnd}
           placeholder="Vaultを検索..."
