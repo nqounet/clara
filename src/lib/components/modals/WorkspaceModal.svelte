@@ -14,7 +14,7 @@
       <p class="settings-msg" class:settings-msg-error={claraStore.claraSettingsMsgIsError}>{claraStore.claraSettingsMsg}</p>
     {/if}
     <div class="modal-actions">
-      <button class="modal-clear" onclick={() => { claraStore.cliWorkingDir = ""; claraStore.handleUpdateClaraConfig(); }} type="button">クリア</button>
+      <button class="modal-clear" onclick={() => claraStore.clearAndSaveWorkspace()} type="button">クリア</button>
       <button class="modal-cancel" onclick={() => claraStore.closeModal()} type="button">キャンセル</button>
       <button class="modal-save" onclick={() => claraStore.handleUpdateClaraConfig()} disabled={claraStore.isSaving} type="button">保存</button>
     </div>

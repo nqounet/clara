@@ -5,12 +5,22 @@
   import ContextBadge from "./ContextBadge.svelte";
   import PromptInput from "./PromptInput.svelte";
   import ActionControls from "./ActionControls.svelte";
+  import { claraStore } from "$lib/clara.svelte";
+
+  let scrollArea: HTMLDivElement;
+
+  $effect(() => {
+    // This effect runs when a new atom is loaded or sent
+    if (claraStore.lastAtom && scrollArea) {
+      scrollArea.scrollTop = 0;
+    }
+  });
 </script>
 
 <main class="main-content">
   <Header />
 
-  <div class="scroll-area">
+  <div class="scroll-area" bind:this={scrollArea}>
     <AtomDetail />
   </div>
 

@@ -71,6 +71,7 @@ export class ClaraStore {
         }
       });
     } catch (e) {
+      this.errorMsg = `初期化に失敗しました: ${e}`;
       console.error("初期化に失敗しました", e);
     }
   }
@@ -125,6 +126,7 @@ export class ClaraStore {
     try {
       this.recentAtoms = await invoke<ClaraFrontmatter[]>("list_recent_atoms", { limit: 10 });
     } catch (e) {
+      this.errorMsg = `履歴の取得に失敗しました: ${e}`;
       console.error("履歴の取得に失敗しました", e);
     } finally {
       this.isLoadingRecent = false;
@@ -134,8 +136,6 @@ export class ClaraStore {
   async loadAtom(id: string) {
     try {
       this.lastAtom = await invoke<ClaraAtom>("load_atom", { id });
-      const scrollArea = document.querySelector('.scroll-area');
-      if (scrollArea) scrollArea.scrollTop = 0;
     } catch (e) {
       this.errorMsg = `読み込みエラー: ${e}`;
     }
@@ -200,6 +200,11 @@ export class ClaraStore {
     }
   }
 
+  async clearAndSaveWorkspace() {
+    this.cliWorkingDir = "";
+    await this.handleUpdateClaraConfig();
+  }
+
   async handleSend() {
     if (this.isSending) return;
     if (!this.prompt.trim()) {
@@ -227,8 +232,6 @@ export class ClaraStore {
         }, 4000);
       }
       await this.fetchRecentAtoms();
-      const scrollArea = document.querySelector('.scroll-area');
-      if (scrollArea) scrollArea.scrollTop = 0;
     } catch (e) {
       this.errorMsg = String(e);
     } finally {
