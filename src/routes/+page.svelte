@@ -451,11 +451,6 @@
           placeholder="AIに聞きたいことを入力してください... (⌘+Enter で送信)"
           style="font-size: {fontSize}px"
         ></textarea>
-        <div class="font-controls">
-          <button class="font-btn" on:click={() => fontSize = Math.max(10, fontSize - 2)} title="文字を小さく">A−</button>
-          <span class="font-size-label">{fontSize}px</span>
-          <button class="font-btn" on:click={() => fontSize = Math.min(32, fontSize + 2)} title="文字を大きく">A+</button>
-        </div>
       </div>
 
       {#if errorMsg}
@@ -467,24 +462,33 @@
       {/if}
 
       <div class="bottom-bar">
-        <div class="cli-info">
-          <button class="cli-info-btn" on:click={() => openModal('cli')} title="CLIコマンドを変更">
-            ⚡ {cliCommand || "gemini"}
-          </button>
-          <button class="cli-info-btn" on:click={() => openModal('model')} title="モデルを変更">
-            🤖 {cliModel || "(デフォルト)"}
-          </button>
-          {#if isSending}
-            <span class="status-indicator">AIが思考中...</span>
-          {/if}
+        <div class="bottom-left">
+          <div class="font-controls">
+            <button class="font-btn" on:click={() => fontSize = Math.max(10, fontSize - 2)} title="文字を小さく">A−</button>
+            <span class="font-size-label">{fontSize}px</span>
+            <button class="font-btn" on:click={() => fontSize = Math.min(32, fontSize + 2)} title="文字を大きく">A+</button>
+          </div>
+          <div class="cli-info">
+            <button class="cli-info-btn" on:click={() => openModal('cli')} title="CLIコマンドを変更">
+              ⚡ {cliCommand || "gemini"}
+            </button>
+            <button class="cli-info-btn" on:click={() => openModal('model')} title="モデルを変更">
+              🤖 {cliModel || "(デフォルト)"}
+            </button>
+            {#if isSending}
+              <span class="status-indicator">AIが思考中...</span>
+            {/if}
+          </div>
         </div>
-        <label class="yolo-toggle" class:yolo-active={yoloMode} for="yolo-checkbox" title="YOLOモード: AIがファイル編集・コマンド実行を確認なしで実行">
-          <input id="yolo-checkbox" type="checkbox" bind:checked={yoloMode} disabled={isSending} />
-          {yoloMode ? '🔥' : '🔒'} YOLO
-        </label>
-        <button class="send-btn" class:send-btn-yolo={yoloMode} on:click={handleSend} disabled={isSending}>
-          {isSending ? "..." : "送信"}
-        </button>
+        <div class="bottom-right">
+          <label class="yolo-toggle" class:yolo-active={yoloMode} for="yolo-checkbox" title="YOLOモード: AIがファイル編集・コマンド実行を確認なしで実行">
+            <input id="yolo-checkbox" type="checkbox" bind:checked={yoloMode} disabled={isSending} />
+            {yoloMode ? '🔥' : '🔒'} YOLO
+          </label>
+          <button class="send-btn" class:send-btn-yolo={yoloMode} on:click={handleSend} disabled={isSending}>
+            {isSending ? "..." : "送信"}
+          </button>
+        </div>
       </div>
     </div>
   </main>
@@ -1237,7 +1241,6 @@
     display: flex;
     align-items: center;
     gap: 0.25rem;
-    margin-top: 0.25rem;
   }
 
   .font-btn {
@@ -1310,6 +1313,14 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .bottom-left, .bottom-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
   }
 
   .cli-info {
