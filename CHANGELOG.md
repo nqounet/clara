@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.2.4] - 2026-03-08T02:30:00+09:00
+
+### Added
+- SKR(セマンティック・ナレッジ・リポジトリ)を利用した過去のAtomの検索機能を実装
+
+### Fixed
+- 検索ボックスでのIME入力確定時（Enterキー）に意図せず検索が実行されてしまう不具合を、ネイティブの`<form>`要素を使用することで修正
+- 検索対象がプロジェクト全体になっていた問題を修正し、Vaultディレクトリ内のみを検索するように変更
+- `gemini` CLI呼び出し時の引数エラー（`--search`, `--prompt`フラグの誤用）を修正
+
 ## [0.2.3] - 2026-03-07T19:50:00+09:00
 
 ### Changed
