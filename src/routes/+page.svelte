@@ -243,6 +243,7 @@
   }
 
   function handleSearchKeydown(e: KeyboardEvent) {
+    if (e.isComposing) return;
     if (e.key === "Enter") {
       e.preventDefault();
       handleSearch();
