@@ -37,6 +37,7 @@
   let isSearching = false;
   let hasSearched = false;
   let searchError = "";
+  let isSearchComposing = false;
 
   // Font size for textarea
   let fontSize = 16;
@@ -242,8 +243,16 @@
     searchError = "";
   }
 
+  function handleSearchCompositionStart() {
+    isSearchComposing = true;
+  }
+
+  function handleSearchCompositionEnd() {
+    isSearchComposing = false;
+  }
+
   function handleSearchKeydown(e: KeyboardEvent) {
-    if (e.isComposing) return;
+    if (e.isComposing || isSearchComposing) return;
     if (e.key === "Enter") {
       e.preventDefault();
       handleSearch();
@@ -274,6 +283,8 @@
           type="text"
           bind:value={searchQuery}
           on:keydown={handleSearchKeydown}
+          on:compositionstart={handleSearchCompositionStart}
+          on:compositionend={handleSearchCompositionEnd}
           placeholder="Vaultを検索..."
           disabled={isSearching}
         />
