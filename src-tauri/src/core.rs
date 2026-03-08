@@ -582,17 +582,10 @@ pub async fn create_and_send_prompt(
     // 7. Markdownファイルのフォーマット構築
     let yaml = serde_yaml::to_string(&frontmatter).map_err(|e| e.to_string())?;
     
-    // Obsidian用の親リンク（コードフェンスの外に配置する必要がある）
-    let parent_link_block = if let Some(ref pid) = parent_id {
-        format!("\n\n---\n**Parent:** [[{}]]\n", pid)
-    } else {
-        String::new()
-    };
-
-    // Frontmatter + Userブロック + AIブロック + 親リンク
+    // Frontmatter + Userブロック + AIブロック
     let markdown_content = format!(
-        "---\n{}---\n\n~~~~~~user\n{}\n~~~~~~\n\n~~~~~~ai\n{}\n~~~~~~{}",
-        yaml, prompt, parsed.body, parent_link_block
+        "---\n{}---\n\n~~~~~~user\n{}\n~~~~~~\n\n~~~~~~ai\n{}\n~~~~~~",
+        yaml, prompt, parsed.body
     );
 
     // 8. ファイルの保存
