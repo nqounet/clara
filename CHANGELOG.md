@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.2.5] - 2026-03-08T16:53:59+09:00
+
+### Added
+- AI回答のリアルタイム・ストリーミング表示機能を実装。回答の生成に合わせてUIが逐次更新されるように改善。
+
+### Changed
+- `AGENTS.md` にナレッジ管理（Atomic Thinking）のガイドラインを追加。LLMがVault内の過去のAtom（ID）を自律的に参照し、文脈を補完する設計を明文化。
+
+### Fixed
+- ストリーミング表示の遅延を解消。標準出力の読み取りを `BufReader`（行単位）からバイト単位の直接読み取りに変更し、バッファリングによる「まとめ出し」を防止。
+
 ## [0.2.4] - 2026-03-08T02:30:00+09:00
 
 ### Added
