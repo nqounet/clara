@@ -1,7 +1,7 @@
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::io::{BufRead, BufReader, Read, Write};
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use tauri::Emitter;
@@ -318,15 +318,45 @@ pub fn execute_cli(
             .map_err(|e| format!("標準入力への書き込みに失敗しました: {}", e))?;
     }
 
-    let stdout = child.stdout.take().ok_or("標準出力の取得に失敗しました")?;
-    let mut reader = BufReader::new(stdout);
+    let mut stdout = child.stdout.take().ok_or("標準出力の取得に失敗しました")?;
     let mut full_output = String::new();
-    let mut line = String::new();
+    let mut buffer = [0u8; 1024];
+    let mut leftover = Vec::new();
 
-    while reader.read_line(&mut line).map_err(|e| format!("標準出力の読み込みに失敗しました: {}", e))? > 0 {
-        window.emit("cli-stdout", &line).map_err(|e| format!("イベントの発行に失敗しました: {}", e))?;
-        full_output.push_str(&line);
-        line.clear();
+    loop {
+        let n = stdout
+            .read(&mut buffer)
+            .map_err(|e| format!("標準出力の読み込みに失敗しました: {}", e))?;
+        if n == 0 {
+            break;
+        }
+
+        leftover.extend_from_slice(&buffer[..n]);
+
+        let (valid_str, next_leftover) = match std::str::from_utf8(&leftover) {
+            Ok(s) => (s, Vec::new()),
+            Err(e) => {
+                let valid_up_to = e.valid_up_to();
+                let s = std::str::from_utf8(&leftover[..valid_up_to]).unwrap();
+                (s, leftover[valid_up_to..].to_vec())
+            }
+        };
+
+        if !valid_str.is_empty() {
+            window
+                .emit("streaming-response", valid_str)
+                .map_err(|e| format!("イベントの発行に失敗しました: {}", e))?;
+            full_output.push_str(valid_str);
+        }
+        leftover = next_leftover;
+    }
+
+    if !leftover.is_empty() {
+        let s = String::from_utf8_lossy(&leftover);
+        window
+            .emit("streaming-response", &s)
+            .map_err(|e| format!("イベントの発行に失敗しました: {}", e))?;
+        full_output.push_str(&s);
     }
 
     let status = child.wait().map_err(|e| format!("コマンドの待機に失敗しました: {}", e))?;

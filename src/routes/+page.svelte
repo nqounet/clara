@@ -6,48 +6,48 @@
   import { onMount, onDestroy } from "svelte";
   import type { ClaraAtom, ClaraFrontmatter, AppConfig, ClaraConfig, SkrSearchResult } from "$lib/types/clara";
 
-  let prompt = "";
-  let isSending = false;
-  let streamingResponse = "";
-  let errorMsg = "";
-  let lastAtom: ClaraAtom | null = null;
-  let yoloMode = false;
-  let yoloSentMsg = "";
-  let appVersion = "";
+  let prompt = $state("");
+  let isSending = $state(false);
+  let streamingResponse = $state("");
+  let errorMsg = $state("");
+  let lastAtom = $state<ClaraAtom | null>(null);
+  let yoloMode = $state(false);
+  let yoloSentMsg = $state("");
+  let appVersion = $state("");
 
   // Modal management
   type ModalKey = 'vault' | 'workspace' | 'cli' | 'model';
-  let activeModal: ModalKey | null = null;
+  let activeModal = $state<ModalKey | null>(null);
 
   // ClaraConfig settings
-  let cliCommand = "gemini";
-  let cliModel = "";
-  let cliWorkingDir = "";
-  let claraSettingsMsg = "";
-  let claraSettingsMsgIsError = false;
+  let cliCommand = $state("gemini");
+  let cliModel = $state("");
+  let cliWorkingDir = $state("");
+  let claraSettingsMsg = $state("");
+  let claraSettingsMsgIsError = $state(false);
 
   // Vault Settings
-  let rootDir = "";
-  let vaultMsg = "";
-  let isVaultMsgError = false;
+  let rootDir = $state("");
+  let vaultMsg = $state("");
+  let isVaultMsgError = $state(false);
 
   // Sidebar (Recent Atoms)
-  let recentAtoms: ClaraFrontmatter[] = [];
-  let isLoadingRecent = false;
+  let recentAtoms = $state<ClaraFrontmatter[]>([]);
+  let isLoadingRecent = $state(false);
 
   // Search
-  let searchQuery = "";
-  let searchResults: SkrSearchResult[] = [];
-  let isSearching = false;
-  let hasSearched = false;
-  let searchError = "";
-  let isSearchComposing = false;
+  let searchQuery = $state("");
+  let searchResults = $state<SkrSearchResult[]>([]);
+  let isSearching = $state(false);
+  let hasSearched = $state(false);
+  let searchError = $state("");
+  let isSearchComposing = $state(false);
 
   // Font size for textarea
-  let fontSize = 16;
+  let fontSize = $state(16);
 
   // 保存中フラグ（連打防止）
-  let isSaving = false;
+  let isSaving = $state(false);
 
   let unlistenStreaming: (() => void) | null = null;
 
@@ -284,25 +284,25 @@
 
 <div class="app-layout">
   <aside class="sidebar">
-    <div class="vault-header" role="button" tabindex="0" on:click={() => openModal('vault')} on:keydown={(e) => e.key === 'Enter' && openModal('vault')}>
+    <div class="vault-header" role="button" tabindex="0" onclick={() => openModal('vault')} onkeydown={(e) => e.key === 'Enter' && openModal('vault')}>
       <div class="vault-label">🏛️ Vault</div>
       <div class="vault-path" title={rootDir}>{rootDir || "読み込み中..."}</div>
       <div class="vault-hint">クリックして変更</div>
     </div>
 
     <div class="search-section">
-      <form class="search-bar" on:submit|preventDefault={handleSearch}>
+      <form class="search-bar" onsubmit={(e) => { e.preventDefault(); handleSearch(); }}>
         <input
           type="text"
           bind:value={searchQuery}
-          on:keydown={handleSearchKeydown}
-          on:compositionstart={handleSearchCompositionStart}
-          on:compositionend={handleSearchCompositionEnd}
+          onkeydown={handleSearchKeydown}
+          oncompositionstart={handleSearchCompositionStart}
+          oncompositionend={handleSearchCompositionEnd}
           placeholder="Vaultを検索..."
           disabled={isSearching}
         />
         {#if searchQuery || hasSearched}
-          <button type="button" class="search-clear-btn" on:click={clearSearch} title="検索をクリア">✕</button>
+          <button type="button" class="search-clear-btn" onclick={clearSearch} title="検索をクリア">✕</button>
         {/if}
         <button type="submit" class="search-exec-btn" disabled={isSearching || !searchQuery.trim()} title="検索">🔍</button>
       </form>
@@ -323,7 +323,7 @@
           <ul class="recent-list">
             {#each searchResults as atom}
               <li>
-                <button class="atom-btn" class:atom-btn-active={lastAtom?.frontmatter.id === atom.id} on:click={() => loadAtom(atom.id)}>
+                <button class="atom-btn" class:atom-btn-active={lastAtom?.frontmatter.id === atom.id} onclick={() => loadAtom(atom.id)}>
                   <span class="atom-title">{atom.title}</span>
                   {#if atom.snippet}
                     <span class="atom-desc">{atom.snippet}</span>
@@ -344,7 +344,7 @@
           <ul class="recent-list">
             {#each recentAtoms as atom}
               <li>
-                <button class="atom-btn" class:atom-btn-active={lastAtom?.frontmatter.id === atom.id} on:click={() => loadAtom(atom.id)}>
+                <button class="atom-btn" class:atom-btn-active={lastAtom?.frontmatter.id === atom.id} onclick={() => loadAtom(atom.id)}>
                   <span class="atom-title">{atom.title}</span>
                   <span class="atom-id">{atom.id.includes('-') ? atom.id.split('-')[0] : atom.id}</span>
                 </button>
@@ -379,7 +379,7 @@
           {#if lastAtom.frontmatter.parent_id}
             <div class="breadcrumb">
               🔗 親ノード: <code>{lastAtom.frontmatter.parent_id}</code>
-              <button class="nav-btn" on:click={() => loadAtom(lastAtom!.frontmatter.parent_id!)}>遡る</button>
+              <button class="nav-btn" onclick={() => loadAtom(lastAtom!.frontmatter.parent_id!)}>遡る</button>
             </div>
           {/if}
           <h2>{lastAtom.frontmatter.title} <span class="id-text">(ID: {lastAtom.frontmatter.id})</span></h2>
@@ -429,7 +429,7 @@
       <button
         class="workspace-display-btn"
         class:workspace-empty={!cliWorkingDir}
-        on:click={() => openModal('workspace')}
+        onclick={() => openModal('workspace')}
       >
         <div class="workspace-label">🖥️ Workspace:</div>
         <div class="workspace-path">
@@ -448,7 +448,7 @@
             <span class="context-label">🔗 リンク先:</span>
             <span class="context-title">{lastAtom.frontmatter.title}</span>
           </div>
-          <button class="unlink-btn" on:click={clearContext} title="コンテキストリンクを解除して新規として扱う">
+          <button class="unlink-btn" onclick={clearContext} title="コンテキストリンクを解除して新規として扱う">
             ✖️ 解除
           </button>
         </div>
@@ -469,7 +469,7 @@
           id="prompt"
           rows="5"
           bind:value={prompt}
-          on:keydown={handleKeydown}
+          onkeydown={handleKeydown}
           disabled={isSending}
           class:textarea-yolo={yoloMode}
           placeholder="AIに聞きたいことを入力してください... (⌘+Enter で送信)"
@@ -488,15 +488,15 @@
       <div class="bottom-bar">
         <div class="bottom-left">
           <div class="font-controls">
-            <button class="font-btn" on:click={() => fontSize = Math.max(10, fontSize - 2)} title="文字を小さく">A−</button>
+            <button class="font-btn" onclick={() => fontSize = Math.max(10, fontSize - 2)} title="文字を小さく">A−</button>
             <span class="font-size-label">{fontSize}px</span>
-            <button class="font-btn" on:click={() => fontSize = Math.min(32, fontSize + 2)} title="文字を大きく">A+</button>
+            <button class="font-btn" onclick={() => fontSize = Math.min(32, fontSize + 2)} title="文字を大きく">A+</button>
           </div>
           <div class="cli-info">
-            <button class="cli-info-btn" on:click={() => openModal('cli')} title="CLIコマンドを変更">
+            <button class="cli-info-btn" onclick={() => openModal('cli')} title="CLIコマンドを変更">
               ⚡ {cliCommand || "gemini"}
             </button>
-            <button class="cli-info-btn" on:click={() => openModal('model')} title="モデルを変更">
+            <button class="cli-info-btn" onclick={() => openModal('model')} title="モデルを変更">
               🤖 {cliModel || "(デフォルト)"}
             </button>
             {#if isSending}
@@ -509,7 +509,7 @@
             <input id="yolo-checkbox" type="checkbox" bind:checked={yoloMode} disabled={isSending} />
             {yoloMode ? '🔥' : '🔒'} YOLO
           </label>
-          <button class="send-btn" class:send-btn-yolo={yoloMode} on:click={handleSend} disabled={isSending}>
+          <button class="send-btn" class:send-btn-yolo={yoloMode} onclick={handleSend} disabled={isSending}>
             {isSending ? "..." : "送信"}
           </button>
         </div>
@@ -521,49 +521,49 @@
 <!-- ═══ Modals ═══ -->
 
 {#if activeModal === 'vault'}
-  <div class="modal-overlay" on:click={closeModal} on:keydown={handleModalKeydown} role="presentation">
-    <div class="modal-body" on:click|stopPropagation on:keydown={() => {}} role="dialog" tabindex="-1" aria-label="Vault設定">
+  <div class="modal-overlay" onclick={closeModal} onkeydown={handleModalKeydown} role="presentation">
+    <div class="modal-body" onclick={(e) => e.stopPropagation()} onkeydown={() => {}} role="dialog" tabindex="-1" aria-label="Vault設定">
       <h2>🏛️ Vault</h2>
       <p class="modal-desc">Atom を保存する Vault のパスを設定します。変更するとコンテキストはリセットされます。</p>
       <div class="path-row">
         <input type="text" bind:value={rootDir} placeholder="~/.clara/atoms" />
-        <button class="pick-btn" on:click={pickVaultDir}>📂</button>
+        <button class="pick-btn" onclick={pickVaultDir}>📂</button>
       </div>
       {#if vaultMsg}
         <p class="settings-msg" class:settings-msg-error={isVaultMsgError}>{vaultMsg}</p>
       {/if}
       <div class="modal-actions">
-        <button class="modal-cancel" on:click={closeModal}>キャンセル</button>
-        <button class="modal-save" on:click={handleUpdateRootDir} disabled={isSaving}>変更する</button>
+        <button class="modal-cancel" onclick={closeModal}>キャンセル</button>
+        <button class="modal-save" onclick={handleUpdateRootDir} disabled={isSaving}>変更する</button>
       </div>
     </div>
   </div>
 {/if}
 
 {#if activeModal === 'workspace'}
-  <div class="modal-overlay" on:click={closeModal} on:keydown={handleModalKeydown} role="presentation">
-    <div class="modal-body" on:click|stopPropagation on:keydown={() => {}} role="dialog" tabindex="-1" aria-label="Workspace設定">
+  <div class="modal-overlay" onclick={closeModal} onkeydown={handleModalKeydown} role="presentation">
+    <div class="modal-body" onclick={(e) => e.stopPropagation()} onkeydown={() => {}} role="dialog" tabindex="-1" aria-label="Workspace設定">
       <h2>🖥️ Workspace</h2>
       <p class="modal-desc">CLIを実行するディレクトリを設定します。空欄にするとCLIのデフォルトが使われます。</p>
       <div class="path-row">
         <input type="text" bind:value={cliWorkingDir} placeholder="CLIの作業ディレクトリ" />
-        <button class="pick-btn" on:click={pickWorkspaceDir}>📂</button>
+        <button class="pick-btn" onclick={pickWorkspaceDir}>📂</button>
       </div>
       {#if claraSettingsMsg}
         <p class="settings-msg" class:settings-msg-error={claraSettingsMsgIsError}>{claraSettingsMsg}</p>
       {/if}
       <div class="modal-actions">
-        <button class="modal-clear" on:click={() => { cliWorkingDir = ""; handleUpdateClaraConfig(); }}>クリア</button>
-        <button class="modal-cancel" on:click={closeModal}>キャンセル</button>
-        <button class="modal-save" on:click={handleUpdateClaraConfig} disabled={isSaving}>保存</button>
+        <button class="modal-clear" onclick={() => { cliWorkingDir = ""; handleUpdateClaraConfig(); }}>クリア</button>
+        <button class="modal-cancel" onclick={closeModal}>キャンセル</button>
+        <button class="modal-save" onclick={handleUpdateClaraConfig} disabled={isSaving}>保存</button>
       </div>
     </div>
   </div>
 {/if}
 
 {#if activeModal === 'cli'}
-  <div class="modal-overlay" on:click={closeModal} on:keydown={handleModalKeydown} role="presentation">
-    <div class="modal-body" on:click|stopPropagation on:keydown={() => {}} role="dialog" tabindex="-1" aria-label="CLIコマンド設定">
+  <div class="modal-overlay" onclick={closeModal} onkeydown={handleModalKeydown} role="presentation">
+    <div class="modal-body" onclick={(e) => e.stopPropagation()} onkeydown={() => {}} role="dialog" tabindex="-1" aria-label="CLIコマンド設定">
       <h2>⚡ CLIコマンド</h2>
       <p class="modal-desc">AIに接続するCLIコマンドを設定します。</p>
       <input type="text" bind:value={cliCommand} placeholder="例: gemini" />
@@ -571,16 +571,16 @@
         <p class="settings-msg" class:settings-msg-error={claraSettingsMsgIsError}>{claraSettingsMsg}</p>
       {/if}
       <div class="modal-actions">
-        <button class="modal-cancel" on:click={closeModal}>キャンセル</button>
-        <button class="modal-save" on:click={handleUpdateClaraConfig} disabled={isSaving}>保存</button>
+        <button class="modal-cancel" onclick={closeModal}>キャンセル</button>
+        <button class="modal-save" onclick={handleUpdateClaraConfig} disabled={isSaving}>保存</button>
       </div>
     </div>
   </div>
 {/if}
 
 {#if activeModal === 'model'}
-  <div class="modal-overlay" on:click={closeModal} on:keydown={handleModalKeydown} role="presentation">
-    <div class="modal-body" on:click|stopPropagation on:keydown={() => {}} role="dialog" tabindex="-1" aria-label="モデル設定">
+  <div class="modal-overlay" onclick={closeModal} onkeydown={handleModalKeydown} role="presentation">
+    <div class="modal-body" onclick={(e) => e.stopPropagation()} onkeydown={() => {}} role="dialog" tabindex="-1" aria-label="モデル設定">
       <h2>🤖 モデル</h2>
       <p class="modal-desc">使用するAIモデルを指定します。空欄にするとCLIのデフォルトモデルが使われます。</p>
       <input type="text" bind:value={cliModel} placeholder="例: gemini-2.5-pro（空欄=CLIデフォルト）" />
@@ -588,8 +588,8 @@
         <p class="settings-msg" class:settings-msg-error={claraSettingsMsgIsError}>{claraSettingsMsg}</p>
       {/if}
       <div class="modal-actions">
-        <button class="modal-cancel" on:click={closeModal}>キャンセル</button>
-        <button class="modal-save" on:click={handleUpdateClaraConfig} disabled={isSaving}>保存</button>
+        <button class="modal-cancel" onclick={closeModal}>キャンセル</button>
+        <button class="modal-save" onclick={handleUpdateClaraConfig} disabled={isSaving}>保存</button>
       </div>
     </div>
   </div>
