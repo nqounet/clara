@@ -53,6 +53,14 @@ export class ConfigStore {
 
   async handleUpdateClaraConfig(onSuccess?: () => void) {
     if (this.isSaving) return;
+    
+    // Validate that CLI command is not empty
+    if (!this.cliCommand.trim()) {
+      this.claraSettingsMsgIsError = true;
+      this.claraSettingsMsg = "CLIコマンドは必須です。";
+      return;
+    }
+    
     this.isSaving = true;
     try {
       this.claraSettingsMsgIsError = false;

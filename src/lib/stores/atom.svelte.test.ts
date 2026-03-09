@@ -14,8 +14,21 @@ describe('AtomStore', () => {
 
   it('clearContext resets lastAtom', () => {
     const store = new AtomStore();
-    // @ts-ignore - mock lastAtom for test
-    store.lastAtom = { prompt: 'test' };
+    
+    // Type-safe complete mock object
+    const mockAtom: import('../types/clara').ClaraAtom = {
+      frontmatter: {
+        id: 'test-id',
+        title: 'Test Atom',
+        created_at: new Date().toISOString(),
+        parent_id: null,
+        tags: [],
+      },
+      prompt: 'test prompt',
+      response: 'test response',
+    };
+    
+    store.lastAtom = mockAtom;
     store.clearContext();
     expect(store.lastAtom).toBeNull();
   });
