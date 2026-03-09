@@ -61,3 +61,43 @@ pub struct ClaraAtom {
     /// AIからの回答
     pub response: String,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_frontmatter_yolo_serialization() {
+        // is_false ヘルパーの基本動作テスト
+        assert!(is_false(&false));
+        assert!(!is_false(&true));
+
+        // yolo=false のとき、YAMLに "yolo" が含まれないこと
+        let fm = ClaraFrontmatter {
+            title: "Test".into(),
+            description: None,
+            id: "test-id".into(),
+            parent_id: None,
+            parent: None,
+            created_at: Utc::now(),
+            tags: vec![],
+            cli_command: None,
+            model: None,
+            workspace: None,
+            yolo: false,
+        };
+        let yaml = serde_yaml::to_string(&fm).unwrap();
+        assert!(
+            !yaml.contains("yolo"),
+            "yolo=false のときは YAML に含まれるべきではない"
+        );
+
+        // yolo=true のとき、YAMLに "yolo: true" が含まれること
+        let fm_yolo = ClaraFrontmatter { yolo: true, ..fm };
+        let yaml_yolo = serde_yaml::to_string(&fm_yolo).unwrap();
+        assert!(
+            yaml_yolo.contains("yolo: true"),
+            "yolo=true のときは YAML に出力されるべき"
+        );
+    }
+}
