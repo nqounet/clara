@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file. See [standa
 
 ## [Unreleased]
 
+## [0.2.8] - 2026-03-09T09:37:53+09:00
+
+### Removed
+- 不要になった旧ストアファイル `src/lib/clara.svelte.ts` を削除（0.2.7 のストア分割に伴うクリーンアップ）
+
 ## [0.2.7] - 2026-03-09T09:09:35+09:00
 
 ### Changed
