@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [Unreleased]
+
+## [0.2.7] - 2026-03-09T09:09:35+09:00
+
+### Changed
+- Migrate stores to Svelte 5 runes and configure Vitest
+
+### Fixed
+- Address PR review comments for atom mock and config validation
+
 ## [0.2.6] - 2026-03-08T22:30:00+09:00
 
 ### Changed
