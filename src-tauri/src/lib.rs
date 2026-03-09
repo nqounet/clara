@@ -1,5 +1,8 @@
+pub mod cli;
+pub mod commands;
+pub mod config;
 pub mod models;
-pub mod core;
+pub mod parser;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -14,14 +17,14 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             greet,
-            core::create_and_send_prompt,
-            core::get_app_config,
-            core::update_root_dir,
-            core::get_clara_config,
-            core::update_clara_config,
-            core::list_recent_atoms,
-            core::load_atom,
-            core::search_skr
+            commands::create_and_send_prompt,
+            commands::get_app_config,
+            commands::update_root_dir,
+            commands::get_clara_config,
+            commands::update_clara_config,
+            commands::list_recent_atoms,
+            commands::load_atom,
+            commands::search_skr
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
