@@ -1,21 +1,21 @@
 <script lang="ts">
-  import { claraStore } from "$lib/clara.svelte";
+  import { configStore, uiStore } from "$lib/stores";
 </script>
 
 <button
   class="workspace-display-btn"
-  class:workspace-empty={!claraStore.cliWorkingDir}
-  onclick={() => claraStore.openModal('workspace')}
+  class:workspace-empty={!configStore.cliWorkingDir}
+  onclick={() => uiStore.openModal('workspace')}
 >
   <div class="workspace-label">🖥️ Workspace:</div>
   <div class="workspace-path">
-    {#if claraStore.cliWorkingDir}
-      <strong>{claraStore.cliWorkingDir}</strong>
+    {#if configStore.cliWorkingDir}
+      <strong>{configStore.cliWorkingDir}</strong>
     {:else}
       <span class="workspace-unset">未設定</span>
     {/if}
   </div>
-  <div class="workspace-hint">クリックして{#if claraStore.cliWorkingDir}変更{:else}設定{/if}</div>
+  <div class="workspace-hint">クリックして{#if configStore.cliWorkingDir}変更{:else}設定{/if}</div>
 </button>
 
 <style>

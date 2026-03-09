@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { claraStore } from "$lib/clara.svelte";
+  import { configStore } from "$lib/stores";
 </script>
 
 <header class="header">
-  <h1>CLARA <span class="app-version">v{claraStore.appVersion}</span></h1>
+  <h1>CLARA <span class="app-version">v{configStore.appVersion}</span></h1>
 </header>
 
 <style>

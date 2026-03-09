@@ -1,71 +1,71 @@
 <script lang="ts">
-  import { claraStore } from "$lib/clara.svelte";
+  import { atomStore } from "$lib/stores";
 </script>
 
-{#if claraStore.isSending}
+{#if atomStore.isSending}
   <div class="atom-detail">
     <div class="breadcrumb">⏳ 応答を生成中...</div>
     <div class="box">
       <h3>User</h3>
-      <pre>{claraStore.prompt}</pre>
+      <pre>{atomStore.prompt}</pre>
     </div>
     <div class="box">
       <h3>AI</h3>
-      <pre>{claraStore.streamingResponse}</pre>
+      <pre>{atomStore.streamingResponse}</pre>
     </div>
   </div>
-{:else if claraStore.lastAtom}
+{:else if atomStore.lastAtom}
   <div class="atom-detail">
-    {#if claraStore.lastAtom.frontmatter.parent_id}
+    {#if atomStore.lastAtom.frontmatter.parent_id}
       <div class="breadcrumb">
-        🔗 親ノード: <code>{claraStore.lastAtom.frontmatter.parent_id}</code>
+        🔗 親ノード: <code>{atomStore.lastAtom.frontmatter.parent_id}</code>
         <button
           class="nav-btn"
-          onclick={() => claraStore.loadAtom(claraStore.lastAtom!.frontmatter.parent_id!)}
+          onclick={() => atomStore.loadAtom(atomStore.lastAtom!.frontmatter.parent_id!)}
         >
           遡る
         </button>
       </div>
     {/if}
     <h2>
-      {claraStore.lastAtom.frontmatter.title}
-      <span class="id-text">(ID: {claraStore.lastAtom.frontmatter.id})</span>
+      {atomStore.lastAtom.frontmatter.title}
+      <span class="id-text">(ID: {atomStore.lastAtom.frontmatter.id})</span>
     </h2>
     <div class="created-at">
-      {new Date(claraStore.lastAtom.frontmatter.created_at).toLocaleString('ja-JP')}
+      {new Date(atomStore.lastAtom.frontmatter.created_at).toLocaleString('ja-JP')}
     </div>
     <div class="tags">
-      {#each claraStore.lastAtom.frontmatter.tags as tag}
+      {#each atomStore.lastAtom.frontmatter.tags as tag}
         <span class="tag">#{tag}</span>
       {/each}
     </div>
 
-    {#if claraStore.lastAtom.frontmatter.description}
-      <p class="description"><strong>概要:</strong> {claraStore.lastAtom.frontmatter.description}</p>
+    {#if atomStore.lastAtom.frontmatter.description}
+      <p class="description"><strong>概要:</strong> {atomStore.lastAtom.frontmatter.description}</p>
     {/if}
 
     <div class="exec-meta">
-      {#if claraStore.lastAtom.frontmatter.cli_command}
-        <span class="exec-meta-item">⚡ {claraStore.lastAtom.frontmatter.cli_command}</span>
+      {#if atomStore.lastAtom.frontmatter.cli_command}
+        <span class="exec-meta-item">⚡ {atomStore.lastAtom.frontmatter.cli_command}</span>
       {/if}
-      {#if claraStore.lastAtom.frontmatter.model}
-        <span class="exec-meta-item">🤖 {claraStore.lastAtom.frontmatter.model}</span>
+      {#if atomStore.lastAtom.frontmatter.model}
+        <span class="exec-meta-item">🤖 {atomStore.lastAtom.frontmatter.model}</span>
       {/if}
-      {#if claraStore.lastAtom.frontmatter.workspace}
-        <span class="exec-meta-item">📂 {claraStore.lastAtom.frontmatter.workspace}</span>
+      {#if atomStore.lastAtom.frontmatter.workspace}
+        <span class="exec-meta-item">📂 {atomStore.lastAtom.frontmatter.workspace}</span>
       {/if}
-      {#if claraStore.lastAtom.frontmatter.yolo}
+      {#if atomStore.lastAtom.frontmatter.yolo}
         <span class="exec-meta-item exec-meta-yolo">🔥 YOLO</span>
       {/if}
     </div>
 
     <div class="box">
       <h3>User</h3>
-      <pre>{claraStore.lastAtom.prompt}</pre>
+      <pre>{atomStore.lastAtom.prompt}</pre>
     </div>
     <div class="box">
       <h3>AI</h3>
-      <pre>{claraStore.lastAtom.response}</pre>
+      <pre>{atomStore.lastAtom.response}</pre>
     </div>
   </div>
 {:else}

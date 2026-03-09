@@ -1,18 +1,18 @@
 <script lang="ts">
-  import { claraStore } from "$lib/clara.svelte";
+  import { configStore, uiStore, closeModal } from "$lib/stores";
   import ModalOverlay from "./ModalOverlay.svelte";
 </script>
 
-<ModalOverlay title="CLIコマンド" onclose={() => claraStore.closeModal()}>
+<ModalOverlay title="CLIコマンド" onclose={() => closeModal()}>
   {#snippet children()}
     <p class="modal-desc">AIに接続するCLIコマンドを設定します。</p>
-    <input type="text" bind:value={claraStore.cliCommand} placeholder="例: gemini" />
-    {#if claraStore.claraSettingsMsg}
-      <p class="settings-msg" class:settings-msg-error={claraStore.claraSettingsMsgIsError}>{claraStore.claraSettingsMsg}</p>
+    <input type="text" bind:value={configStore.cliCommand} placeholder="例: gemini" />
+    {#if configStore.claraSettingsMsg}
+      <p class="settings-msg" class:settings-msg-error={configStore.claraSettingsMsgIsError}>{configStore.claraSettingsMsg}</p>
     {/if}
     <div class="modal-actions">
-      <button class="modal-cancel" onclick={() => claraStore.closeModal()} type="button">キャンセル</button>
-      <button class="modal-save" onclick={() => claraStore.handleUpdateClaraConfig()} disabled={claraStore.isSaving} type="button">保存</button>
+      <button class="modal-cancel" onclick={() => closeModal()} type="button">キャンセル</button>
+      <button class="modal-save" onclick={() => configStore.handleUpdateClaraConfig(() => uiStore.closeModalSilent())} disabled={configStore.isSaving} type="button">保存</button>
     </div>
   {/snippet}
 </ModalOverlay>
