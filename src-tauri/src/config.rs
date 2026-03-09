@@ -33,7 +33,8 @@ pub fn load_app_config() -> std::io::Result<AppConfig> {
     let config_path = get_global_settings_path();
     if config_path.exists() {
         let content = fs::read_to_string(&config_path)?;
-        Ok(serde_json::from_str(&content).unwrap_or_default())
+        serde_json::from_str(&content)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
     } else {
         let default_config = AppConfig::default();
         if let Some(parent) = config_path.parent() {
@@ -97,7 +98,8 @@ pub fn init_workspace() -> std::io::Result<(AppConfig, ClaraConfig)> {
 
     let clara_config = if config_path.exists() {
         let content = fs::read_to_string(&config_path)?;
-        serde_json::from_str(&content).unwrap_or_default()
+        serde_json::from_str(&content)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?
     } else {
         let default_config = ClaraConfig::default();
         let json = serde_json::to_string_pretty(&default_config)?;

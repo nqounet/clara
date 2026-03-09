@@ -24,9 +24,22 @@ pub fn update_root_dir(new_path: String) -> Result<AppConfig, String> {
         return Err("Vaultのパスを指定してください。".into());
     }
 
+    let path_buf = PathBuf::from(trimmed);
+    if !path_buf.is_absolute() {
+        return Err("Vaultのパスは絶対パスで指定してください。".into());
+    }
+
+    if let Some(home) = dirs::home_dir() {
+        if !path_buf.starts_with(&home) {
+            return Err(
+                "セキュリティ上の理由により、Vaultのパスはホームディレクトリ内に設定してください。"
+                    .into(),
+            );
+        }
+    }
+
     let mut config = load_app_config().map_err(|e| format!("設定の読み込みに失敗: {}", e))?;
 
-    let path_buf = PathBuf::from(trimmed);
     config.root_dir = path_buf.clone();
 
     if !path_buf.exists() {
@@ -52,18 +65,25 @@ pub fn list_recent_atoms(limit: usize) -> Result<Vec<ClaraFrontmatter>, String> 
     let mut frontmatters = Vec::new();
     let entries = fs::read_dir(atoms_dir).map_err(|e| e.to_string())?;
 
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if path.is_file() && path.extension().unwrap_or_default() == "md" {
-            if let Ok(content) = fs::read_to_string(&path) {
-                let parts: Vec<&str> = content.splitn(3, "---").collect();
-                if parts.len() >= 3 {
-                    let yaml_str = parts[1].trim();
-                    if let Ok(frontmatter) = serde_yaml::from_str::<ClaraFrontmatter>(yaml_str) {
-                        frontmatters.push(frontmatter);
+    for entry_result in entries {
+        match entry_result {
+            Ok(entry) => {
+                let path = entry.path();
+                if path.is_file() && path.extension().unwrap_or_default() == "md" {
+                    if let Ok(content) = fs::read_to_string(&path) {
+                        let parts: Vec<&str> = content.splitn(3, "---").collect();
+                        if parts.len() >= 3 {
+                            let yaml_str = parts[1].trim();
+                            if let Ok(frontmatter) =
+                                serde_yaml::from_str::<ClaraFrontmatter>(yaml_str)
+                            {
+                                frontmatters.push(frontmatter);
+                            }
+                        }
                     }
                 }
             }
+            Err(e) => eprintln!("Failed to read directory entry: {}", e),
         }
     }
 
@@ -79,29 +99,34 @@ pub fn load_atom(id: String) -> Result<ClaraAtom, String> {
     let atoms_dir = get_atoms_dir(&app_config.root_dir);
 
     let entries = fs::read_dir(atoms_dir).map_err(|e| e.to_string())?;
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
-            if file_name.starts_with(&id) && file_name.ends_with(".md") {
-                let content = fs::read_to_string(&path).map_err(|e| e.to_string())?;
+    for entry_result in entries {
+        match entry_result {
+            Ok(entry) => {
+                let path = entry.path();
+                if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
+                    if file_name.starts_with(&id) && file_name.ends_with(".md") {
+                        let content = fs::read_to_string(&path).map_err(|e| e.to_string())?;
 
-                let parts: Vec<&str> = content.splitn(3, "---").collect();
-                if parts.len() < 3 {
-                    return Err("ファイルフォーマットが不正です".into());
+                        let parts: Vec<&str> = content.splitn(3, "---").collect();
+                        if parts.len() < 3 {
+                            return Err("ファイルフォーマットが不正です".into());
+                        }
+
+                        let frontmatter: ClaraFrontmatter =
+                            serde_yaml::from_str(parts[1].trim()).map_err(|e| e.to_string())?;
+                        let body = parts[2];
+
+                        let (prompt, response) = parse_atom_body(body);
+
+                        return Ok(ClaraAtom {
+                            frontmatter,
+                            prompt,
+                            response,
+                        });
+                    }
                 }
-
-                let frontmatter: ClaraFrontmatter =
-                    serde_yaml::from_str(parts[1].trim()).map_err(|e| e.to_string())?;
-                let body = parts[2];
-
-                let (prompt, response) = parse_atom_body(body);
-
-                return Ok(ClaraAtom {
-                    frontmatter,
-                    prompt,
-                    response,
-                });
             }
+            Err(e) => eprintln!("Failed to read directory entry: {}", e),
         }
     }
 
@@ -124,13 +149,36 @@ pub fn update_clara_config(
         return Err("CLIコマンド名は必須です。空欄にできません。".into());
     }
 
+    let cmd_path = std::path::Path::new(&cli_command);
+    if let Some(name) = cmd_path.file_name().and_then(|n| n.to_str()) {
+        if !["gemini", "gemini-cli", "deba"].contains(&name) {
+            return Err(
+                "CLIコマンドは 'gemini', 'gemini-cli', 'deba' のみを許可しています。".into(),
+            );
+        }
+    } else {
+        return Err("無効なCLIコマンドです。".into());
+    }
+
+    let mut safe_working_dir = None;
+    if let Some(wd) = working_dir.filter(|s| !s.trim().is_empty()) {
+        let path_buf = PathBuf::from(wd);
+        if !path_buf.is_absolute() {
+            return Err("Workspaceディレクトリは絶対パスで指定してください。".into());
+        }
+        if let Some(home) = dirs::home_dir() {
+            if !path_buf.starts_with(&home) {
+                return Err("セキュリティ上の理由により、Workspaceはホームディレクトリ内に設定してください。".into());
+            }
+        }
+        safe_working_dir = Some(path_buf);
+    }
+
     let (_, mut clara_config) = init_workspace().map_err(|e| e.to_string())?;
 
     clara_config.cli_command = cli_command;
     clara_config.model = model.filter(|s| !s.trim().is_empty());
-    clara_config.working_dir = working_dir
-        .filter(|s| !s.trim().is_empty())
-        .map(PathBuf::from);
+    clara_config.working_dir = safe_working_dir;
 
     let config_path = get_config_path();
     let json = serde_json::to_string_pretty(&clara_config).map_err(|e| e.to_string())?;
@@ -155,7 +203,14 @@ pub async fn create_and_send_prompt(
     let system_instruction = "Please generate a title, a short description, a URL-safe slug, and related tags for this request, then provide your answer.\nYou MUST format your output exactly as follows:\n\nTITLE: [Your generated title]\nDESC: [A short summary, or leave empty if not needed]\nSLUG: [lowercase ASCII slug using hyphens only, max 30 chars, e.g. rust-tauri-setup]\nTAGS: [comma-separated tags]\n---\n[Your actual response]\n\n";
     let full_prompt = format!("{}{}", system_instruction, prompt);
 
-    let raw_response = execute_cli(&window, &full_prompt, &config, yolo)?;
+    let window_clone = window.clone();
+    let config_clone = config.clone();
+    let prompt_clone = full_prompt.clone();
+    let raw_response = tauri::async_runtime::spawn_blocking(move || {
+        execute_cli(&window_clone, &prompt_clone, &config_clone, yolo)
+    })
+    .await
+    .map_err(|e| format!("スレッドの実行に失敗: {}", e))??;
 
     let parsed = parse_ai_response(&raw_response);
 
@@ -210,7 +265,12 @@ pub async fn search_skr(
     let system_instruction = "Search the Semantic Knowledge Repository (SKR) for the following query.\nYou MUST format each search result exactly as follows:\n\nID: [id (filename without extension)]\nTITLE: [title]\nSCORE: [relevance score]\nSNIPPET: [short snippet]\n\nQuery: ";
     let full_prompt = format!("{}{}", system_instruction, query);
 
-    let raw_output = execute_cli(&window, &full_prompt, &config, false)?;
+    let window_clone = window.clone();
+    let raw_output = tauri::async_runtime::spawn_blocking(move || {
+        execute_cli(&window_clone, &full_prompt, &config, false)
+    })
+    .await
+    .map_err(|e| format!("スレッドの実行に失敗: {}", e))??;
 
     Ok(parse_skr_results(&raw_output))
 }

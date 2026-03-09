@@ -77,23 +77,23 @@ pub fn parse_ai_response(raw_response: &str) -> ParsedAiResponse {
             break;
         }
 
-        if trimmed.starts_with("TITLE:") {
-            title = trimmed.replace("TITLE:", "").trim().to_string();
-        } else if trimmed.starts_with("DESC:") {
-            let desc = trimmed.replace("DESC:", "").trim().to_string();
+        if let Some(val) = trimmed.strip_prefix("TITLE:") {
+            title = val.trim().to_string();
+        } else if let Some(val) = trimmed.strip_prefix("DESC:") {
+            let desc = val.trim().to_string();
             if !desc.is_empty() {
                 description = Some(desc);
             }
-        } else if trimmed.starts_with("SLUG:") {
-            let s = trimmed.replace("SLUG:", "").trim().to_string();
+        } else if let Some(val) = trimmed.strip_prefix("SLUG:") {
+            let s = val.trim().to_string();
             if !s.is_empty() {
                 let sanitized = generate_slug(&s);
                 if sanitized != "untitled" {
                     slug = Some(sanitized);
                 }
             }
-        } else if trimmed.starts_with("TAGS:") {
-            let tags_str = trimmed.replace("TAGS:", "").trim().to_string();
+        } else if let Some(val) = trimmed.strip_prefix("TAGS:") {
+            let tags_str = val.trim().to_string();
             if !tags_str.is_empty() {
                 tags = tags_str
                     .split(',')
@@ -138,46 +138,38 @@ pub struct SkrSearchResult {
 }
 
 pub fn parse_skr_results(output: &str) -> Vec<SkrSearchResult> {
-    let mut results = Vec::new();
-    let mut current_item = None;
+    output
+        .trim()
+        .split("\n\n")
+        .filter_map(|block| {
+            let mut id: Option<String> = None;
+            let mut title: Option<String> = None;
+            let mut score: Option<f32> = None;
+            let mut snippet: Option<String> = None;
 
-    for line in output.lines() {
-        let trimmed = line.trim();
-        if trimmed.is_empty() {
-            continue;
-        }
-
-        if let Some(stripped) = trimmed.strip_prefix("ID:") {
-            if let Some(item) = current_item.take() {
-                results.push(item);
-            }
-            current_item = Some(SkrSearchResult {
-                id: stripped.trim().to_string(),
-                title: "Untitled".to_string(),
-                score: 0.0,
-                snippet: String::new(),
-            });
-        } else if let Some(ref mut item) = current_item {
-            if let Some(stripped) = trimmed.strip_prefix("TITLE:") {
-                item.title = stripped.trim().to_string();
-            } else if let Some(stripped) = trimmed.strip_prefix("SCORE:") {
-                item.score = stripped.trim().parse().unwrap_or(0.0);
-            } else if let Some(stripped) = trimmed.strip_prefix("SNIPPET:") {
-                item.snippet = stripped.trim().to_string();
-            } else {
-                if !item.snippet.is_empty() {
-                    item.snippet.push('\n');
+            for line in block.lines() {
+                if let Some(val) = line.strip_prefix("ID:") {
+                    id = Some(val.trim().to_string());
+                } else if let Some(val) = line.strip_prefix("TITLE:") {
+                    title = Some(val.trim().to_string());
+                } else if let Some(val) = line.strip_prefix("SCORE:") {
+                    score = val.trim().parse().ok();
+                } else if let Some(val) = line.strip_prefix("SNIPPET:") {
+                    snippet = Some(val.trim().to_string());
+                } else if let Some(s) = snippet.as_mut() {
+                    s.push('\n');
+                    s.push_str(line);
                 }
-                item.snippet.push_str(trimmed);
             }
-        }
-    }
 
-    if let Some(item) = current_item {
-        results.push(item);
-    }
-
-    results
+            Some(SkrSearchResult {
+                id: id?,
+                title: title?,
+                score: score?,
+                snippet: snippet.unwrap_or_default(),
+            })
+        })
+        .collect()
 }
 
 #[cfg(test)]
