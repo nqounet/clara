@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main", "feature/**" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test-rust:
+    name: Test Rust (Backend)
+    runs-on: ubuntu-latest
+    
+    # Tauri requires some system dependencies on Linux
+    # https://tauri.app/v1/guides/getting-started/prerequisites#linux
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies (Ubuntu)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          work-dir: src-tauri
+
+      - name: Check formatting
+        working-directory: src-tauri
+        run: cargo fmt -- --check
+
+      - name: Run Clippy
+        working-directory: src-tauri
+        run: cargo clippy -- -D warnings
+
+      - name: Run Tests
+        working-directory: src-tauri
+        run: cargo test
+
+  test-frontend:
+    name: Test Node.js (Frontend)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Svelte Check (Type checking)
+        run: npm run check
+
+      - name: Run Vitest
+        run: npm run test
