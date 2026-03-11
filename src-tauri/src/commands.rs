@@ -22,9 +22,8 @@ use crate::config::{
     AppConfig, ClaraConfig,
 };
 use crate::models::{ClaraAtom, ClaraFrontmatter};
-use crate::parser::{
-    generate_slug, parse_ai_response, parse_atom_body, parse_skr_results, SkrSearchResult,
-};
+use crate::parser::{generate_slug, parse_ai_response, parse_atom_body, SkrSearchResult};
+use tauri::Manager;
 
 #[tauri::command]
 pub fn get_app_config() -> Result<AppConfig, String> {
@@ -294,24 +293,19 @@ pub async fn create_and_send_prompt(
 }
 
 #[tauri::command]
-pub async fn search_skr(
-    window: tauri::Window,
+pub fn search_skr(
+    app_handle: tauri::AppHandle,
     query: String,
 ) -> Result<Vec<SkrSearchResult>, String> {
-    let (app_config, clara_config) = init_workspace().map_err(|e| e.to_string())?;
+    let (app_config, _) = init_workspace().map_err(|e| e.to_string())?;
 
-    let mut config = clara_config.clone();
-    config.working_dir = Some(get_atoms_dir(&app_config.root_dir));
+    let atoms_dir = get_atoms_dir(&app_config.root_dir);
+    let cache_path = app_config.root_dir.join(".clara").join("embeddings.json");
 
-    let system_instruction = "Search the Semantic Knowledge Repository (SKR) for the following query.\nYou MUST format each search result exactly as follows:\n\nID: [id (filename without extension)]\nTITLE: [title]\nSCORE: [relevance score]\nSNIPPET: [short snippet]\n\nQuery: ";
-    let full_prompt = format!("{}{}", system_instruction, query);
+    let state = app_handle.state::<crate::search::SearchState>();
 
-    let window_clone = window.clone();
-    let raw_output = tauri::async_runtime::spawn_blocking(move || {
-        execute_cli(&window_clone, &full_prompt, &config, false)
-    })
-    .await
-    .map_err(|e| format!("スレッドの実行に失敗: {}", e))??;
+    let state_inner = state.inner();
 
-    Ok(parse_skr_results(&raw_output))
+    let results = state_inner.search(&query, &atoms_dir, &cache_path)?;
+    Ok(results)
 }
