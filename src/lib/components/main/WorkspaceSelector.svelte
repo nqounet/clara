@@ -12,7 +12,7 @@
     {#if configStore.cliWorkingDir}
       <strong>{configStore.cliWorkingDir}</strong>
     {:else}
-      <span class="workspace-unset">未設定</span>
+      <span class="workspace-unset">未設定 (必須)</span>
     {/if}
   </div>
   <div class="workspace-hint">クリックして{#if configStore.cliWorkingDir}変更{:else}設定{/if}</div>
@@ -43,14 +43,14 @@
   }
 
   .workspace-display-btn.workspace-empty {
-    color: #aaa;
-    border: 1px dashed #ccc;
-    background: transparent;
+    color: #e53e3e;
+    border: 1px dashed #e53e3e;
+    background: #fff5f5;
   }
 
   .workspace-display-btn.workspace-empty:hover {
-    border-color: #0366d6;
-    color: #555;
+    border-color: #c53030;
+    background: #fed7d7;
   }
 
   .workspace-label {
@@ -63,8 +63,7 @@
   }
 
   .workspace-unset {
-    color: #aaa;
-    font-style: italic;
+    font-weight: bold;
   }
 
   .workspace-hint {
@@ -75,5 +74,9 @@
 
   .workspace-display-btn:hover .workspace-hint {
     color: #0366d6;
+  }
+
+  .workspace-display-btn.workspace-empty:hover .workspace-hint {
+    color: #c53030;
   }
 </style>

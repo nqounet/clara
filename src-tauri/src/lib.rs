@@ -22,6 +22,7 @@ pub fn run() {
             commands::update_root_dir,
             commands::get_clara_config,
             commands::update_clara_config,
+            commands::remove_workspace_history,
             commands::list_recent_atoms,
             commands::load_atom,
             commands::search_skr

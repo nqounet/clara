@@ -54,6 +54,8 @@ pub struct ClaraConfig {
     pub model: Option<String>,
     #[serde(default)]
     pub working_dir: Option<PathBuf>,
+    #[serde(default)]
+    pub workspace_history: Vec<String>,
 }
 
 impl Default for ClaraConfig {
@@ -63,6 +65,7 @@ impl Default for ClaraConfig {
             cli_args: vec![],
             model: None,
             working_dir: None,
+            workspace_history: vec![],
         }
     }
 }
