@@ -59,7 +59,8 @@ pub fn update_root_dir(new_path: String) -> Result<AppConfig, String> {
     config.root_dir = normalized_path.clone();
 
     if !normalized_path.exists() {
-        fs::create_dir_all(&normalized_path).map_err(|e| format!("ディレクトリの作成に失敗: {}", e))?;
+        fs::create_dir_all(&normalized_path)
+            .map_err(|e| format!("ディレクトリの作成に失敗: {}", e))?;
     }
 
     let config_path = get_global_settings_path();
@@ -203,7 +204,9 @@ pub fn update_clara_config(
     clara_config.working_dir = safe_working_dir;
 
     clara_config.workspace_history.retain(|x| x != &wd_string);
-    clara_config.workspace_history.insert(0, normalized_path.to_string_lossy().into_owned());
+    clara_config
+        .workspace_history
+        .insert(0, normalized_path.to_string_lossy().into_owned());
     if clara_config.workspace_history.len() > 999 {
         clara_config.workspace_history.truncate(999);
     }
