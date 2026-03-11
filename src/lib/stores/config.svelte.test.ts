@@ -21,23 +21,11 @@ describe('ConfigStore', () => {
       cli_command: 'custom-cli',
       model: 'test-model',
       working_dir: '/work',
-      cli_args: []
+      cli_args: [],
+      workspace_history: []
     });
     expect(store.cliCommand).toBe('custom-cli');
     expect(store.cliModel).toBe('test-model');
     expect(store.cliWorkingDir).toBe('/work');
-  });
-
-  it('clears workspace', () => {
-    const store = new ConfigStore();
-    store.updateClaraConfig({
-      cli_command: 'custom-cli',
-      model: 'test-model',
-      working_dir: '/work',
-      cli_args: []
-    });
-    store.clearWorkspace();
-    expect(store.cliWorkingDir).toBe('');
-    expect(store.cliCommand).toBe('custom-cli'); // Ensure other settings remain
   });
 });

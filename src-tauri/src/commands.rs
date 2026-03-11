@@ -160,19 +160,18 @@ pub fn update_clara_config(
         return Err("無効なCLIコマンドです。".into());
     }
 
-    let mut safe_working_dir = None;
-    if let Some(wd) = working_dir.filter(|s| !s.trim().is_empty()) {
-        let path_buf = PathBuf::from(wd);
-        if !path_buf.is_absolute() {
-            return Err("Workspaceディレクトリは絶対パスで指定してください。".into());
-        }
-        if let Some(home) = dirs::home_dir() {
-            if !path_buf.starts_with(&home) {
-                return Err("セキュリティ上の理由により、Workspaceはホームディレクトリ内に設定してください。".into());
-            }
-        }
-        safe_working_dir = Some(path_buf);
+    let wd_string = working_dir.filter(|s| !s.trim().is_empty()).ok_or_else(|| "Workspaceディレクトリは必須です。空欄にできません。".to_string())?;
+
+    let path_buf = PathBuf::from(&wd_string);
+    if !path_buf.is_absolute() {
+        return Err("Workspaceディレクトリは絶対パスで指定してください。".into());
     }
+    if let Some(home) = dirs::home_dir() {
+        if !path_buf.starts_with(&home) {
+            return Err("セキュリティ上の理由により、Workspaceはホームディレクトリ内に設定してください。".into());
+        }
+    }
+    let safe_working_dir = Some(path_buf);
 
     let (_, mut clara_config) = init_workspace().map_err(|e| e.to_string())?;
 
@@ -180,10 +179,26 @@ pub fn update_clara_config(
     clara_config.model = model.filter(|s| !s.trim().is_empty());
     clara_config.working_dir = safe_working_dir;
 
+    clara_config.workspace_history.retain(|x| x != &wd_string);
+    clara_config.workspace_history.insert(0, wd_string);
+    if clara_config.workspace_history.len() > 999 {
+        clara_config.workspace_history.truncate(999);
+    }
+
     let config_path = get_config_path();
     let json = serde_json::to_string_pretty(&clara_config).map_err(|e| e.to_string())?;
     fs::write(&config_path, json).map_err(|e| format!("設定の保存に失敗: {}", e))?;
 
+    Ok(clara_config)
+}
+
+#[tauri::command]
+pub fn remove_workspace_history(path: String) -> Result<ClaraConfig, String> {
+    let (_, mut clara_config) = init_workspace().map_err(|e| e.to_string())?;
+    clara_config.workspace_history.retain(|x| x != &path);
+    let config_path = get_config_path();
+    let json = serde_json::to_string_pretty(&clara_config).map_err(|e| e.to_string())?;
+    fs::write(&config_path, json).map_err(|e| format!("設定の保存に失敗: {}", e))?;
     Ok(clara_config)
 }
 

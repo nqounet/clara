@@ -15,6 +15,7 @@ export interface ClaraConfig {
   cli_args: string[];
   model?: string;
   working_dir?: string;
+  workspace_history: string[];
 }
 /**
  * 1回のやり取り（Atom）を保存するMarkdownのFrontmatter(YAML)部分の定義

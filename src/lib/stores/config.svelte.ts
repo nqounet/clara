@@ -7,6 +7,7 @@ export class ConfigStore {
   cliCommand = $state('gemini');
   cliModel = $state('');
   cliWorkingDir = $state('');
+  workspaceHistory = $state<string[]>([]);
   claraSettingsMsg = $state('');
   claraSettingsMsgIsError = $state(false);
 
@@ -30,13 +31,10 @@ export class ConfigStore {
     this.cliCommand = config.cli_command;
     this.cliModel = config.model ?? '';
     this.cliWorkingDir = config.working_dir ?? '';
+    this.workspaceHistory = config.workspace_history ?? [];
   }
 
-  clearWorkspace() {
-    this.cliWorkingDir = '';
-  }
-
-  private async pickFolder(): Promise<string | null> {
+  async pickFolder(): Promise<string | null> {
     const selected = await openDialog({ directory: true, multiple: false });
     return typeof selected === "string" ? selected : null;
   }
@@ -60,6 +58,12 @@ export class ConfigStore {
       this.claraSettingsMsg = "CLIコマンドは必須です。";
       return;
     }
+
+    if (!this.cliWorkingDir.trim()) {
+      this.claraSettingsMsgIsError = true;
+      this.claraSettingsMsg = "Workspaceディレクトリは必須です。";
+      return;
+    }
     
     this.isSaving = true;
     try {
@@ -73,6 +77,7 @@ export class ConfigStore {
       this.cliCommand = updated.cli_command;
       this.cliModel = updated.model ?? "";
       this.cliWorkingDir = updated.working_dir ?? "";
+      this.workspaceHistory = updated.workspace_history ?? [];
       this.claraSettingsMsg = "✓ 保存しました";
       setTimeout(() => {
         this.claraSettingsMsg = "";
@@ -86,8 +91,12 @@ export class ConfigStore {
     }
   }
 
-  async clearAndSaveWorkspace(onSuccess?: () => void) {
-    this.cliWorkingDir = "";
-    await this.handleUpdateClaraConfig(onSuccess);
+  async removeWorkspaceHistory(path: string) {
+    try {
+      const updated = await invoke<ClaraConfig>("remove_workspace_history", { path });
+      this.workspaceHistory = updated.workspace_history ?? [];
+    } catch (e) {
+      console.error("Failed to remove history:", e);
+    }
   }
 }
