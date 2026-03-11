@@ -1,6 +1,20 @@
 use chrono::Utc;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Component, Path, PathBuf};
+
+fn normalize_path(path: &Path) -> PathBuf {
+    let mut normalized = PathBuf::new();
+    for component in path.components() {
+        match component {
+            Component::ParentDir => {
+                normalized.pop();
+            }
+            Component::CurDir => {}
+            _ => normalized.push(component),
+        }
+    }
+    normalized
+}
 
 use crate::cli::execute_cli;
 use crate::config::{
@@ -29,8 +43,10 @@ pub fn update_root_dir(new_path: String) -> Result<AppConfig, String> {
         return Err("Vaultのパスは絶対パスで指定してください。".into());
     }
 
+    let normalized_path = normalize_path(&path_buf);
+
     if let Some(home) = dirs::home_dir() {
-        if !path_buf.starts_with(&home) {
+        if !normalized_path.starts_with(&home) {
             return Err(
                 "セキュリティ上の理由により、Vaultのパスはホームディレクトリ内に設定してください。"
                     .into(),
@@ -40,10 +56,10 @@ pub fn update_root_dir(new_path: String) -> Result<AppConfig, String> {
 
     let mut config = load_app_config().map_err(|e| format!("設定の読み込みに失敗: {}", e))?;
 
-    config.root_dir = path_buf.clone();
+    config.root_dir = normalized_path.clone();
 
-    if !path_buf.exists() {
-        fs::create_dir_all(&path_buf).map_err(|e| format!("ディレクトリの作成に失敗: {}", e))?;
+    if !normalized_path.exists() {
+        fs::create_dir_all(&normalized_path).map_err(|e| format!("ディレクトリの作成に失敗: {}", e))?;
     }
 
     let config_path = get_global_settings_path();
@@ -168,15 +184,17 @@ pub fn update_clara_config(
     if !path_buf.is_absolute() {
         return Err("Workspaceディレクトリは絶対パスで指定してください。".into());
     }
+    let normalized_path = normalize_path(&path_buf);
+
     if let Some(home) = dirs::home_dir() {
-        if !path_buf.starts_with(&home) {
+        if !normalized_path.starts_with(&home) {
             return Err(
                 "セキュリティ上の理由により、Workspaceはホームディレクトリ内に設定してください。"
                     .into(),
             );
         }
     }
-    let safe_working_dir = Some(path_buf);
+    let safe_working_dir = Some(normalized_path.clone());
 
     let (_, mut clara_config) = init_workspace().map_err(|e| e.to_string())?;
 
@@ -185,7 +203,7 @@ pub fn update_clara_config(
     clara_config.working_dir = safe_working_dir;
 
     clara_config.workspace_history.retain(|x| x != &wd_string);
-    clara_config.workspace_history.insert(0, wd_string);
+    clara_config.workspace_history.insert(0, normalized_path.to_string_lossy().into_owned());
     if clara_config.workspace_history.len() > 999 {
         clara_config.workspace_history.truncate(999);
     }
