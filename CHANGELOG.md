@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file. See [standa
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-03-12T08:55:54+09:00
+
+### Added
+- implement local vector search for SKR without external API dependencies
+
+### Changed
+- implement code review suggestions for local vector search
+
 ## [0.2.9] - 2026-03-12T02:41:28+09:00
 
 ### Added
