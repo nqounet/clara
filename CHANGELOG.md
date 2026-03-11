@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file. See [standa
 
 ## [Unreleased]
 
+## [0.2.9] - 2026-03-12T02:41:28+09:00
+
+### Added
+- add workspace history to config and UI
+
+### Changed
+- fix duplicate CI runs on PRs and formatting errors
+
+### Fixed
+- resolve path traversal vulnerability
+
 ## [0.2.8] - 2026-03-09T09:37:53+09:00
 
 ### Removed
