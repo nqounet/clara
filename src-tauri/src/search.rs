@@ -58,8 +58,14 @@ impl SearchState {
         self.init_model()?;
 
         let mut cache: EmbeddingsCache = if cache_path.exists() {
-            let data = fs::read_to_string(cache_path).unwrap_or_default();
-            serde_json::from_str(&data).unwrap_or_default()
+            let data = fs::read_to_string(cache_path)
+                .map_err(|e| format!("Failed to read cache file: {}", e))?;
+            if data.is_empty() {
+                EmbeddingsCache::default()
+            } else {
+                serde_json::from_str(&data)
+                    .map_err(|e| format!("Failed to parse cache file: {}", e))?
+            }
         } else {
             EmbeddingsCache::default()
         };
@@ -146,22 +152,22 @@ impl SearchState {
         }
 
         // Remove deleted atoms
-        let keys: Vec<String> = cache.entries.keys().cloned().collect();
-        for key in keys {
-            if !current_files.contains(&key) {
-                cache.entries.remove(&key);
-                changed = true;
-            }
+        let initial_len = cache.entries.len();
+        cache.entries.retain(|key, _| current_files.contains(key));
+        if cache.entries.len() != initial_len {
+            changed = true;
         }
 
         if changed {
             if let Some(parent) = cache_path.parent() {
-                let _ = fs::create_dir_all(parent);
+                fs::create_dir_all(parent)
+                    .map_err(|e| format!("Failed to create cache directory: {}", e))?;
             }
-            if let Ok(file) = std::fs::File::create(cache_path) {
-                let writer = std::io::BufWriter::new(file);
-                let _ = serde_json::to_writer(writer, &cache);
-            }
+            let file = std::fs::File::create(cache_path)
+                .map_err(|e| format!("Failed to create cache file: {}", e))?;
+            let writer = std::io::BufWriter::new(file);
+            serde_json::to_writer(writer, &cache)
+                .map_err(|e| format!("Failed to write to cache: {}", e))?;
         }
 
         if cache.entries.is_empty() {

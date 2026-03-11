@@ -304,17 +304,8 @@ pub fn search_skr(
 
     let state = app_handle.state::<crate::search::SearchState>();
 
-    // modelの初期化や計算には時間がかかるため、Tauriのブロッキングスレッドで実行
     let state_inner = state.inner();
 
-    // We cannot easily move state_inner to spawn_blocking without Arc.
-    // Since search might be long, we should ideally use Arc, but since it's just Mutex, we can just block here.
-    // Tauri async commands run in an async context, but it's okay to await a blocking task.
-    // Wait, let's wrap SearchState with Arc? No, we can just use `tauri::async_runtime::spawn_blocking`
-    // but we can't move `state_inner`. Let's just execute it directly in the command.
-    // For Tauri async commands, running blocking code will block the async runtime worker,
-    // which is usually a thread pool, so it shouldn't freeze the UI.
     let results = state_inner.search(&query, &atoms_dir, &cache_path)?;
-
     Ok(results)
 }
