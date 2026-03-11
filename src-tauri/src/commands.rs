@@ -160,7 +160,9 @@ pub fn update_clara_config(
         return Err("無効なCLIコマンドです。".into());
     }
 
-    let wd_string = working_dir.filter(|s| !s.trim().is_empty()).ok_or_else(|| "Workspaceディレクトリは必須です。空欄にできません。".to_string())?;
+    let wd_string = working_dir
+        .filter(|s| !s.trim().is_empty())
+        .ok_or_else(|| "Workspaceディレクトリは必須です。空欄にできません。".to_string())?;
 
     let path_buf = PathBuf::from(&wd_string);
     if !path_buf.is_absolute() {
@@ -168,7 +170,10 @@ pub fn update_clara_config(
     }
     if let Some(home) = dirs::home_dir() {
         if !path_buf.starts_with(&home) {
-            return Err("セキュリティ上の理由により、Workspaceはホームディレクトリ内に設定してください。".into());
+            return Err(
+                "セキュリティ上の理由により、Workspaceはホームディレクトリ内に設定してください。"
+                    .into(),
+            );
         }
     }
     let safe_working_dir = Some(path_buf);
