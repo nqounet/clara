@@ -20,7 +20,10 @@
               {#if atom.snippet}
                 <span class="atom-desc">{atom.snippet}</span>
               {/if}
-              <span class="atom-id">{atom.id.includes('-') ? atom.id.split('-')[0] : atom.id}</span>
+              <div class="atom-meta">
+                <span class="atom-id">{atom.id.includes('-') ? atom.id.split('-')[0] : atom.id}</span>
+                <span class="atom-score" title="類似度スコア">Score: {atom.score.toFixed(3)}</span>
+              </div>
             </button>
           </li>
         {/each}
@@ -110,9 +113,25 @@
     text-overflow: ellipsis;
   }
 
+  .atom-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.2rem;
+  }
+
   .atom-id {
     font-size: 0.65rem;
     color: #999;
+  }
+
+  .atom-score {
+    font-size: 0.6rem;
+    color: #0366d6;
+    background: #e1ecf4;
+    padding: 0.1rem 0.3rem;
+    border-radius: 3px;
+    font-family: monospace;
   }
 
   .atom-desc {

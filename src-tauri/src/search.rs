@@ -39,8 +39,13 @@ impl SearchState {
     fn init_model(&self) -> Result<(), String> {
         let mut model_guard = self.model.lock().map_err(|e| e.to_string())?;
         if model_guard.is_none() {
-            let mut options = InitOptions::new(EmbeddingModel::MultilingualE5Small);
+            let mut options = InitOptions::new(EmbeddingModel::BGEM3);
             options.show_download_progress = true;
+            if let Some(mut cache_path) = dirs::home_dir() {
+                cache_path.push(".clara");
+                cache_path.push(".fastembed_cache");
+                options.cache_dir = cache_path;
+            }
 
             let model = TextEmbedding::try_new(options)
                 .map_err(|e| format!("Failed to initialize embedding model: {}", e))?;
