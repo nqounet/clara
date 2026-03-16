@@ -96,7 +96,8 @@ impl SearchState {
         let mut changed = false;
         let mut current_files = std::collections::HashSet::new();
 
-        struct PendingUpdate {
+        // ベクトル再生成が必要な更新（ファイル変更 or 新規）
+        struct PendingEmbedUpdate {
             filename: String,
             modified: u64,
             title: String,
@@ -104,7 +105,15 @@ impl SearchState {
             text_to_embed: String,
             body: String,
         }
-        let mut pending_updates = Vec::new();
+        // bodyフィールドのみの補完（既存ベクトルは保持、旧キャッシュ互換用）
+        struct PendingBodyUpdate {
+            filename: String,
+            title: String,
+            snippet: String,
+            body: String,
+        }
+        let mut pending_embed_updates = Vec::new();
+        let mut pending_body_updates = Vec::new();
 
         if !atoms_dir.exists() {
             return Ok(vec![]);
@@ -126,34 +135,59 @@ impl SearchState {
                         .map_err(|e| e.to_string())?
                         .as_secs();
 
-                    let needs_update = cache
-                        .entries
-                        .get(&filename)
-                        .map(|c| c.modified < modified || c.body.is_empty())
-                        .unwrap_or(true);
-
-                    if needs_update {
-                        let content = fs::read_to_string(&path).map_err(|e| e.to_string())?;
-                        let extracted = extract_text_for_embedding(&content);
-                        pending_updates.push(PendingUpdate {
-                            filename,
-                            modified,
-                            title: extracted.title,
-                            snippet: extracted.snippet,
-                            text_to_embed: extracted.text_to_embed,
-                            body: extracted.body,
-                        });
+                    match cache.entries.get(&filename) {
+                        Some(c) if c.modified >= modified && !c.body.is_empty() => {
+                            // キャッシュは最新かつbodyあり → 更新不要
+                        }
+                        Some(c) if c.modified >= modified && c.body.is_empty() => {
+                            // ベクトルは最新だがbodyが空 → body補完のみ（再embedding不要）
+                            let content =
+                                fs::read_to_string(&path).map_err(|e| e.to_string())?;
+                            let extracted = extract_text_for_embedding(&content);
+                            pending_body_updates.push(PendingBodyUpdate {
+                                filename,
+                                title: extracted.title,
+                                snippet: extracted.snippet,
+                                body: extracted.body,
+                            });
+                        }
+                        _ => {
+                            // 新規 or ファイル変更 → フルembedding更新
+                            let content =
+                                fs::read_to_string(&path).map_err(|e| e.to_string())?;
+                            let extracted = extract_text_for_embedding(&content);
+                            pending_embed_updates.push(PendingEmbedUpdate {
+                                filename,
+                                modified,
+                                title: extracted.title,
+                                snippet: extracted.snippet,
+                                text_to_embed: extracted.text_to_embed,
+                                body: extracted.body,
+                            });
+                        }
                     }
                 }
             }
         }
 
-        // Process pending updates in batches
-        if !pending_updates.is_empty() {
+        // body補完のみの更新（ベクトル再生成なし）
+        for update in &pending_body_updates {
+            if let Some(entry) = cache.entries.get_mut(&update.filename) {
+                entry.title = update.title.clone();
+                entry.snippet = update.snippet.clone();
+                entry.body = update.body.clone();
+            }
+        }
+        if !pending_body_updates.is_empty() {
+            changed = true;
+        }
+
+        // フルembedding更新（ベクトル再生成 + body）
+        if !pending_embed_updates.is_empty() {
             let mut model_guard = self.model.lock().map_err(|e| e.to_string())?;
             let model = model_guard.as_mut().unwrap();
 
-            for chunk in pending_updates.chunks(32) {
+            for chunk in pending_embed_updates.chunks(32) {
                 let texts: Vec<String> = chunk.iter().map(|u| u.text_to_embed.clone()).collect();
                 let embeddings = model.embed(texts, None).map_err(|e| e.to_string())?;
 
@@ -221,15 +255,15 @@ impl SearchState {
         vector_results.truncate(TOP_K_PER_SEARCH);
 
         // --- キーワード検索パス (BM25) ---
-        let documents: HashMap<String, String> = cache
+        // タイトルとbodyを結合した検索テキストへの参照マップを構築
+        let search_texts: HashMap<&str, String> = cache
             .entries
             .iter()
             .map(|(id, entry)| {
-                let text = format!("{} {}", entry.title, entry.body);
-                (id.clone(), text)
+                (id.as_str(), format!("{} {}", entry.title, entry.body))
             })
             .collect();
-        let keyword_results = bm25_search(query, &documents, TOP_K_PER_SEARCH);
+        let keyword_results = bm25_search(query, &search_texts, TOP_K_PER_SEARCH);
 
         // --- RRF (Reciprocal Rank Fusion) によるスコア統合 ---
         let merged = rrf_merge(&vector_results, &keyword_results, &cache, FINAL_TOP_K);
@@ -301,7 +335,14 @@ fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
 // BM25 キーワード検索
 // =============================================================================
 
-/// Unicode対応トークナイザ。Latin/ASCII系はワード単位、CJK系はユニグラムで分割する。
+/// Unicode対応トークナイザ。
+///
+/// テキストを検索用トークンに分割する。言語によって分割戦略が異なる:
+/// - **Latin/ASCII系**: ワード単位で分割（空白・句読点が区切り）
+/// - **CJK系（漢字・ひらがな・カタカナ・ハングル）**: ユニグラム（1文字=1トークン）で分割
+///
+/// 形態素解析器（MeCab等）を使わない軽量実装のため、日本語の複合語はセマンティック検索
+/// （ベクトル検索）側で補完される設計。キーワード検索は主に正確な用語一致を担当する。
 fn tokenize(text: &str) -> Vec<String> {
     let lower = text.to_lowercase();
     let mut tokens = Vec::new();
@@ -330,7 +371,15 @@ fn tokenize(text: &str) -> Vec<String> {
     tokens
 }
 
-/// CJK統合漢字、ひらがな、カタカナの判定
+/// CJK文字の判定。以下のUnicodeブロックをカバーする:
+/// - CJK統合漢字 (U+4E00–U+9FFF)
+/// - CJK統合漢字拡張A (U+3400–U+4DBF)
+/// - ひらがな (U+3040–U+309F)
+/// - カタカナ (U+30A0–U+30FF)
+/// - CJK互換漢字 (U+F900–U+FAFF)
+/// - ハングル音節 (U+AC00–U+D7AF)
+///
+/// これらの文字はスペース区切りを持たないため、ユニグラムトークン化の対象となる。
 fn is_cjk(ch: char) -> bool {
     matches!(ch,
         '\u{4E00}'..='\u{9FFF}'   // CJK統合漢字
@@ -350,7 +399,7 @@ fn is_cjk(ch: char) -> bool {
 /// 戻り値: (ドキュメントID, BM25スコア) のベクトル（スコア降順）
 fn bm25_search(
     query: &str,
-    documents: &HashMap<String, String>,
+    documents: &HashMap<&str, String>,
     top_k: usize,
 ) -> Vec<(String, f64)> {
     if documents.is_empty() {
@@ -370,14 +419,14 @@ fn bm25_search(
     for (id, text) in documents {
         let tokens = tokenize(text);
         let len = tokens.len();
-        doc_lengths.insert(id.as_str(), len);
+        doc_lengths.insert(*id, len);
         total_length += len;
 
         let mut tf: HashMap<String, usize> = HashMap::new();
         for token in tokens {
             *tf.entry(token).or_insert(0) += 1;
         }
-        doc_tokens.insert(id.as_str(), tf);
+        doc_tokens.insert(*id, tf);
     }
 
     let num_docs = documents.len() as f64;
@@ -401,8 +450,8 @@ fn bm25_search(
     let mut scores: Vec<(String, f64)> = documents
         .keys()
         .map(|id| {
-            let tf_map = &doc_tokens[id.as_str()];
-            let doc_len = *doc_lengths.get(id.as_str()).unwrap_or(&0) as f64;
+            let tf_map = &doc_tokens[id];
+            let doc_len = *doc_lengths.get(id).unwrap_or(&0) as f64;
 
             let score: f64 = query_tokens
                 .iter()
@@ -414,7 +463,7 @@ fn bm25_search(
                 })
                 .sum();
 
-            (id.clone(), score)
+            (id.to_string(), score)
         })
         .collect();
 
@@ -459,7 +508,9 @@ fn rrf_merge(
     sorted.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
     sorted.truncate(top_k);
 
-    // SkrSearchResult に変換（scoreはRRFスコアをf32にキャスト）
+    // SkrSearchResult に変換
+    // RRFスコアはf64で計算するが、表示用にf32へキャストする。
+    // RRFスコアの値域は0〜0.033程度（最大 2/(k+1) ≈ 0.033）のためf32で十分な精度。
     sorted
         .into_iter()
         .filter_map(|(id, rrf_score)| {
@@ -537,10 +588,10 @@ mod tests {
 
     #[test]
     fn test_bm25_search_basic() {
-        let mut documents = HashMap::new();
-        documents.insert("doc1".to_string(), "Rust programming language".to_string());
-        documents.insert("doc2".to_string(), "Python programming language".to_string());
-        documents.insert("doc3".to_string(), "Rust web development with Tauri".to_string());
+        let mut documents: HashMap<&str, String> = HashMap::new();
+        documents.insert("doc1", "Rust programming language".to_string());
+        documents.insert("doc2", "Python programming language".to_string());
+        documents.insert("doc3", "Rust web development with Tauri".to_string());
 
         let results = bm25_search("Rust programming", &documents, 10);
 
@@ -551,10 +602,10 @@ mod tests {
 
     #[test]
     fn test_bm25_search_japanese() {
-        let mut documents = HashMap::new();
-        documents.insert("doc1".to_string(), "Rustでの開発環境の構築".to_string());
-        documents.insert("doc2".to_string(), "Pythonでのデータ分析".to_string());
-        documents.insert("doc3".to_string(), "Rustのパフォーマンス最適化".to_string());
+        let mut documents: HashMap<&str, String> = HashMap::new();
+        documents.insert("doc1", "Rustでの開発環境の構築".to_string());
+        documents.insert("doc2", "Pythonでのデータ分析".to_string());
+        documents.insert("doc3", "Rustのパフォーマンス最適化".to_string());
 
         let results = bm25_search("Rust開発", &documents, 10);
 
@@ -565,23 +616,23 @@ mod tests {
 
     #[test]
     fn test_bm25_search_empty_query() {
-        let mut documents = HashMap::new();
-        documents.insert("doc1".to_string(), "Some text".to_string());
+        let mut documents: HashMap<&str, String> = HashMap::new();
+        documents.insert("doc1", "Some text".to_string());
         let results = bm25_search("", &documents, 10);
         assert!(results.is_empty());
     }
 
     #[test]
     fn test_bm25_search_empty_documents() {
-        let documents: HashMap<String, String> = HashMap::new();
+        let documents: HashMap<&str, String> = HashMap::new();
         let results = bm25_search("query", &documents, 10);
         assert!(results.is_empty());
     }
 
     #[test]
     fn test_bm25_search_no_match() {
-        let mut documents = HashMap::new();
-        documents.insert("doc1".to_string(), "Rust programming".to_string());
+        let mut documents: HashMap<&str, String> = HashMap::new();
+        documents.insert("doc1", "Rust programming".to_string());
         let results = bm25_search("Python", &documents, 10);
         // "Python" doesn't appear in any document, so BM25 returns empty
         assert!(results.is_empty());
@@ -589,10 +640,14 @@ mod tests {
 
     #[test]
     fn test_bm25_search_top_k() {
-        let mut documents = HashMap::new();
-        for i in 0..100 {
-            documents.insert(format!("doc{}", i), format!("word{} common", i));
-        }
+        // 文字列の所有権を保持するVec
+        let keys: Vec<String> = (0..20).map(|i| format!("doc{}", i)).collect();
+        let values: Vec<String> = (0..20).map(|i| format!("word{} common", i)).collect();
+        let documents: HashMap<&str, String> = keys
+            .iter()
+            .zip(values.into_iter())
+            .map(|(k, v)| (k.as_str(), v))
+            .collect();
         let results = bm25_search("common", &documents, 5);
         assert!(results.len() <= 5);
     }
