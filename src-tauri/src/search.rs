@@ -141,8 +141,7 @@ impl SearchState {
                         }
                         Some(c) if c.modified >= modified && c.body.is_empty() => {
                             // ベクトルは最新だがbodyが空 → body補完のみ（再embedding不要）
-                            let content =
-                                fs::read_to_string(&path).map_err(|e| e.to_string())?;
+                            let content = fs::read_to_string(&path).map_err(|e| e.to_string())?;
                             let extracted = extract_text_for_embedding(&content);
                             pending_body_updates.push(PendingBodyUpdate {
                                 filename,
@@ -153,8 +152,7 @@ impl SearchState {
                         }
                         _ => {
                             // 新規 or ファイル変更 → フルembedding更新
-                            let content =
-                                fs::read_to_string(&path).map_err(|e| e.to_string())?;
+                            let content = fs::read_to_string(&path).map_err(|e| e.to_string())?;
                             let extracted = extract_text_for_embedding(&content);
                             pending_embed_updates.push(PendingEmbedUpdate {
                                 filename,
@@ -244,26 +242,28 @@ impl SearchState {
         let mut vector_results: Vec<(String, f32)> = cache
             .entries
             .iter()
-            .map(|(id, entry)| {
-                let score = cosine_similarity(&query_embedding, &entry.vector);
-                (id.clone(), score)
+            .filter_map(|(id, entry)| {
+                // 次元不一致のキャッシュエントリはスキップする（別モデルでの生成等）
+                if entry.vector.len() != query_embedding.len() {
+                    None
+                } else {
+                    let score = cosine_similarity(&query_embedding, &entry.vector);
+                    Some((id.clone(), score))
+                }
             })
             .collect();
-        vector_results.sort_by(|a, b| {
-            b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal)
-        });
+        vector_results.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
         vector_results.truncate(TOP_K_PER_SEARCH);
 
         // --- キーワード検索パス (BM25) ---
-        // タイトルとbodyを結合した検索テキストへの参照マップを構築
-        let search_texts: HashMap<&str, String> = cache
-            .entries
-            .iter()
-            .map(|(id, entry)| {
-                (id.as_str(), format!("{} {}", entry.title, entry.body))
-            })
-            .collect();
-        let keyword_results = bm25_search(query, &search_texts, TOP_K_PER_SEARCH);
+        let keyword_results = bm25_search(
+            query,
+            cache
+                .entries
+                .iter()
+                .map(|(id, entry)| (id.as_str(), entry.title.as_str(), entry.body.as_str())),
+            TOP_K_PER_SEARCH,
+        );
 
         // --- RRF (Reciprocal Rank Fusion) によるスコア統合 ---
         let merged = rrf_merge(&vector_results, &keyword_results, &cache, FINAL_TOP_K);
@@ -303,10 +303,12 @@ fn extract_text_for_embedding(content: &str) -> ExtractedText {
             }
         }
     }
-    let body = text_lines.join(" ");
-    let snippet = body.chars().take(150).collect::<String>();
+    let full_body = text_lines.join(" ");
+    let snippet = full_body.chars().take(150).collect::<String>();
+    // キャッシュ肥大化を防ぐため、キーワード検索用のbodyも一定長で切り詰める
+    let body = full_body.chars().take(4000).collect::<String>();
 
-    let embed_body = body.chars().take(1500).collect::<String>();
+    let embed_body = full_body.chars().take(1500).collect::<String>();
     let text_to_embed = format!("passage: {}\n{}", title, embed_body);
     ExtractedText {
         title,
@@ -317,6 +319,9 @@ fn extract_text_for_embedding(content: &str) -> ExtractedText {
 }
 
 fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
+    if a.len() != b.len() {
+        return 0.0;
+    }
     let mut dot = 0.0;
     let mut norm_a = 0.0;
     let mut norm_b = 0.0;
@@ -393,19 +398,15 @@ fn is_cjk(ch: char) -> bool {
 
 /// BM25アルゴリズムによるキーワード検索を実行する。
 ///
-/// `documents`: ドキュメントID → テキスト本文のマッピング
+/// `documents`: (ドキュメントID, タイトル, テキスト本文) のイテレータ
 /// `top_k`: 返却する上位件数
 ///
 /// 戻り値: (ドキュメントID, BM25スコア) のベクトル（スコア降順）
-fn bm25_search(
+fn bm25_search<'a>(
     query: &str,
-    documents: &HashMap<&str, String>,
+    documents: impl Iterator<Item = (&'a str, &'a str, &'a str)>,
     top_k: usize,
 ) -> Vec<(String, f64)> {
-    if documents.is_empty() {
-        return vec![];
-    }
-
     let query_tokens = tokenize(query);
     if query_tokens.is_empty() {
         return vec![];
@@ -415,22 +416,33 @@ fn bm25_search(
     let mut doc_tokens: HashMap<&str, HashMap<String, usize>> = HashMap::new();
     let mut doc_lengths: HashMap<&str, usize> = HashMap::new();
     let mut total_length: usize = 0;
+    let mut num_docs = 0;
+    let mut doc_ids = Vec::new();
 
-    for (id, text) in documents {
-        let tokens = tokenize(text);
+    for (id, title, body) in documents {
+        num_docs += 1;
+        doc_ids.push(id);
+
+        let mut tokens = tokenize(title);
+        tokens.extend(tokenize(body));
+
         let len = tokens.len();
-        doc_lengths.insert(*id, len);
+        doc_lengths.insert(id, len);
         total_length += len;
 
         let mut tf: HashMap<String, usize> = HashMap::new();
         for token in tokens {
             *tf.entry(token).or_insert(0) += 1;
         }
-        doc_tokens.insert(*id, tf);
+        doc_tokens.insert(id, tf);
     }
 
-    let num_docs = documents.len() as f64;
-    let avg_doc_length = total_length as f64 / num_docs;
+    if num_docs == 0 || total_length == 0 {
+        return vec![];
+    }
+
+    let num_docs_f64 = num_docs as f64;
+    let avg_doc_length = total_length as f64 / num_docs_f64;
 
     // クエリトークンごとのIDF（逆文書頻度）を計算
     let mut idf_map: HashMap<&str, f64> = HashMap::new();
@@ -442,13 +454,13 @@ fn bm25_search(
             .values()
             .filter(|tf| tf.contains_key(qt.as_str()))
             .count() as f64;
-        let idf = ((num_docs - docs_with_term + 0.5) / (docs_with_term + 0.5) + 1.0).ln();
+        let idf = ((num_docs_f64 - docs_with_term + 0.5) / (docs_with_term + 0.5) + 1.0).ln();
         idf_map.insert(qt.as_str(), idf);
     }
 
     // 各文書のBM25スコアを計算
-    let mut scores: Vec<(String, f64)> = documents
-        .keys()
+    let mut scores: Vec<(String, f64)> = doc_ids
+        .into_iter()
         .map(|id| {
             let tf_map = &doc_tokens[id];
             let doc_len = *doc_lengths.get(id).unwrap_or(&0) as f64;
@@ -593,7 +605,11 @@ mod tests {
         documents.insert("doc2", "Python programming language".to_string());
         documents.insert("doc3", "Rust web development with Tauri".to_string());
 
-        let results = bm25_search("Rust programming", &documents, 10);
+        let results = bm25_search(
+            "Rust programming",
+            documents.iter().map(|(id, body)| (*id, "", body.as_str())),
+            10,
+        );
 
         // doc1 should score highest (contains both "Rust" and "programming")
         assert!(!results.is_empty());
@@ -607,7 +623,11 @@ mod tests {
         documents.insert("doc2", "Pythonでのデータ分析".to_string());
         documents.insert("doc3", "Rustのパフォーマンス最適化".to_string());
 
-        let results = bm25_search("Rust開発", &documents, 10);
+        let results = bm25_search(
+            "Rust開発",
+            documents.iter().map(|(id, body)| (*id, "", body.as_str())),
+            10,
+        );
 
         // doc1 contains both "Rust" and "開" and "発"
         assert!(!results.is_empty());
@@ -618,14 +638,22 @@ mod tests {
     fn test_bm25_search_empty_query() {
         let mut documents: HashMap<&str, String> = HashMap::new();
         documents.insert("doc1", "Some text".to_string());
-        let results = bm25_search("", &documents, 10);
+        let results = bm25_search(
+            "",
+            documents.iter().map(|(id, body)| (*id, "", body.as_str())),
+            10,
+        );
         assert!(results.is_empty());
     }
 
     #[test]
     fn test_bm25_search_empty_documents() {
         let documents: HashMap<&str, String> = HashMap::new();
-        let results = bm25_search("query", &documents, 10);
+        let results = bm25_search(
+            "query",
+            documents.iter().map(|(id, body)| (*id, "", body.as_str())),
+            10,
+        );
         assert!(results.is_empty());
     }
 
@@ -633,7 +661,11 @@ mod tests {
     fn test_bm25_search_no_match() {
         let mut documents: HashMap<&str, String> = HashMap::new();
         documents.insert("doc1", "Rust programming".to_string());
-        let results = bm25_search("Python", &documents, 10);
+        let results = bm25_search(
+            "Python",
+            documents.iter().map(|(id, body)| (*id, "", body.as_str())),
+            10,
+        );
         // "Python" doesn't appear in any document, so BM25 returns empty
         assert!(results.is_empty());
     }
@@ -648,7 +680,11 @@ mod tests {
             .zip(values.into_iter())
             .map(|(k, v)| (k.as_str(), v))
             .collect();
-        let results = bm25_search("common", &documents, 5);
+        let results = bm25_search(
+            "common",
+            documents.iter().map(|(id, body)| (*id, "", body.as_str())),
+            5,
+        );
         assert!(results.len() <= 5);
     }
 
@@ -696,10 +732,7 @@ mod tests {
             ("doc2".to_string(), 0.8f32),
             ("doc3".to_string(), 0.7f32),
         ];
-        let keyword_results = vec![
-            ("doc2".to_string(), 5.0f64),
-            ("doc1".to_string(), 3.0f64),
-        ];
+        let keyword_results = vec![("doc2".to_string(), 5.0f64), ("doc1".to_string(), 3.0f64)];
 
         let results = rrf_merge(&vector_results, &keyword_results, &cache, 10);
 
