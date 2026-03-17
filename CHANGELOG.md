@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file. See [standa
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-03-18T02:36:30+09:00
+
+### Added
+- update search model to BGE-M3 and display similarity score
+- implement hybrid search engine with BM25 keyword search and RRF fusion
+
+### Changed
+- refactor: address code review - split body-only updates, improve docs, optimize allocations
+
+### Fixed
+- fix: address pull request review feedback for hybrid search
+
 ## [0.3.0] - 2026-03-12T08:55:54+09:00
 
 ### Added
