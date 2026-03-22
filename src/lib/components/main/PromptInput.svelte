@@ -38,12 +38,12 @@
 
 <style>
   .yolo-warning-banner {
-    background: #fff3e0;
-    border: 1px solid #f59e0b;
+    background: var(--accent-amber-bg);
+    border: 1px solid var(--accent-amber);
     border-radius: 4px;
     padding: 0.35rem 0.6rem;
     font-size: 0.75rem;
-    color: #92400e;
+    color: var(--accent-amber);
     font-weight: 600;
     margin-bottom: 0.4rem;
     animation: yoloPulse 2s ease-in-out infinite;
@@ -61,7 +61,9 @@
   textarea {
     width: 100%;
     padding: 0.5rem;
-    border: 1px solid #ccc;
+    background: var(--bg-base);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
     border-radius: 4px;
     font-family: inherit;
     box-sizing: border-box;
@@ -69,25 +71,36 @@
     line-height: 1.5;
   }
 
+  textarea::placeholder {
+    color: var(--text-muted);
+  }
+
+  textarea:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  }
+
   textarea:disabled {
-    background-color: #e9ecef;
+    background: var(--bg-surface);
+    color: var(--text-muted);
     cursor: not-allowed;
   }
 
   textarea.textarea-yolo {
-    border-color: #f59e0b;
+    border-color: var(--accent-amber);
     box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.15);
   }
 
   .error {
-    color: #e53e3e;
+    color: var(--accent-red);
     font-weight: 600;
     font-size: 0.8rem;
     margin: 0.2rem 0;
   }
 
   .yolo-sent-msg {
-    color: #d97706;
+    color: var(--accent-amber);
     font-weight: 600;
     font-size: 0.75rem;
     margin: 0.2rem 0;

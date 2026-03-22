@@ -28,41 +28,55 @@
 
 <style>
   .search-section {
-    padding: 0.6rem 0.75rem;
-    border-bottom: 1px solid #ddd;
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
   }
 
   .search-bar {
     display: flex;
-    gap: 0.3rem;
+    gap: 0.25rem;
+    flex: 1;
+    min-width: 0;
   }
 
   .search-bar input {
     flex: 1;
-    padding: 0.35rem 0.5rem;
-    border: 1px solid #ccc;
+    min-width: 120px;
+    max-width: 250px;
+    padding: 0.3rem 0.5rem;
+    background: var(--bg-base);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
     border-radius: 4px;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     box-sizing: border-box;
+  }
+
+  .search-bar input::placeholder {
+    color: var(--text-muted);
   }
 
   .search-bar input:focus {
     outline: none;
-    border-color: #0366d6;
-    box-shadow: 0 0 0 2px rgba(3, 102, 214, 0.15);
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
   }
 
   .search-bar input:disabled {
-    background: #e9ecef;
+    background: var(--bg-surface);
+    color: var(--text-muted);
   }
 
   .search-exec-btn,
   .search-clear-btn {
-    background: #e8ebee;
-    border: 1px solid #ccc;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
     border-radius: 4px;
     cursor: pointer;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     padding: 0 0.4rem;
     flex-shrink: 0;
     width: auto;
@@ -70,7 +84,8 @@
 
   .search-exec-btn:hover:not(:disabled),
   .search-clear-btn:hover {
-    background: #ddd;
+    background: var(--scrollbar-hover);
+    color: var(--text-primary);
   }
 
   .search-exec-btn:disabled {
@@ -78,28 +93,24 @@
     cursor: not-allowed;
   }
 
-  .search-clear-btn {
-    color: #888;
-  }
-
   .search-clear-btn:hover {
-    color: #e53e3e;
-    border-color: #e53e3e;
+    color: var(--accent-red);
+    border-color: var(--accent-red);
   }
 
   .search-status {
     font-size: 0.7rem;
-    color: #0366d6;
-    margin: 0.3rem 0 0;
+    color: var(--accent-blue);
+    margin: 0 0 0 0.5rem;
+    white-space: nowrap;
     animation: blink 1.5s infinite;
   }
 
   .search-error {
     font-size: 0.7rem;
-    color: #e53e3e;
-    margin: 0.3rem 0 0;
-    line-height: 1.3;
-    word-break: break-all;
+    color: var(--accent-red);
+    margin: 0 0 0 0.5rem;
+    white-space: nowrap;
   }
 
   @keyframes blink {

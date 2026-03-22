@@ -26,10 +26,10 @@
     gap: 0.2rem;
     width: 100%;
     font-size: 0.8rem;
-    color: #555;
+    color: var(--text-secondary);
     margin-bottom: 0.4rem;
     padding: 0.4rem 0.6rem;
-    background: #f0f4f8;
+    background: var(--bg-surface);
     border-radius: 4px;
     border: 1px solid transparent;
     cursor: pointer;
@@ -38,24 +38,28 @@
   }
 
   .workspace-display-btn:hover {
-    background: #e4eaf0;
-    border-color: #ccc;
+    background: var(--bg-elevated);
+    border-color: var(--border);
   }
 
   .workspace-display-btn.workspace-empty {
-    color: #e53e3e;
-    border: 1px dashed #e53e3e;
-    background: #fff5f5;
+    color: var(--accent-red);
+    border: 1px dashed var(--accent-red);
+    background: var(--accent-red-bg);
   }
 
   .workspace-display-btn.workspace-empty:hover {
-    border-color: #c53030;
-    background: #fed7d7;
+    border-color: var(--accent-red);
+    background: var(--accent-red-bg);
   }
 
   .workspace-label {
     font-weight: 600;
     font-size: 0.75rem;
+  }
+
+  .workspace-path strong {
+    color: var(--text-primary);
   }
 
   .workspace-path {
@@ -68,15 +72,15 @@
 
   .workspace-hint {
     font-size: 0.65rem;
-    color: #aaa;
+    color: var(--text-muted);
     transition: color 0.15s;
   }
 
   .workspace-display-btn:hover .workspace-hint {
-    color: #0366d6;
+    color: var(--accent-blue);
   }
 
   .workspace-display-btn.workspace-empty:hover .workspace-hint {
-    color: #c53030;
+    color: var(--accent-red);
   }
 </style>
