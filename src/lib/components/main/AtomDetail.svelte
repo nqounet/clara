@@ -99,7 +99,7 @@
   }
 
   .nav-btn:hover {
-    background: rgba(59, 130, 246, 0.3);
+    filter: brightness(120%);
   }
 
   .atom-detail h2 {

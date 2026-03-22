@@ -136,7 +136,7 @@
   }
 
   .send-btn:hover:not(:disabled) {
-    background: #16A34A;
+    filter: brightness(90%);
   }
 
   .send-btn-yolo {
@@ -145,7 +145,7 @@
   }
 
   .send-btn-yolo:hover:not(:disabled) {
-    background: #D97706;
+    filter: brightness(90%);
   }
 
   .yolo-toggle {

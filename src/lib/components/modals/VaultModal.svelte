@@ -94,7 +94,7 @@
   }
 
   .modal-save:hover:not(:disabled) {
-    background: #2563EB;
+    filter: brightness(90%);
   }
 
   .modal-save:disabled {
