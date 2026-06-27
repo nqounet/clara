@@ -1,6 +1,5 @@
 [tools]
 node = "latest"
-cargo = "latest"
 rust = "latest"
 
 [tasks."dev"]

@@ -26,12 +26,12 @@ use crate::parser::{generate_slug, parse_ai_response, parse_atom_body, SkrSearch
 use tauri::Manager;
 
 #[tauri::command]
-pub fn get_app_config() -> Result<AppConfig, String> {
-    load_app_config().map_err(|e| format!("設定の読み込みに失敗しました: {}", e))
+pub fn get_app_config() -> Result<AppConfig, crate::error::AppError> {
+    load_app_config().map_err(|e| format!("設定の読み込みに失敗しました: {}", e).into())
 }
 
 #[tauri::command]
-pub fn update_root_dir(new_path: String) -> Result<AppConfig, String> {
+pub fn update_root_dir(new_path: String) -> Result<AppConfig, crate::error::AppError> {
     let trimmed = new_path.trim();
     if trimmed.is_empty() {
         return Err("Vaultのパスを指定してください。".into());
@@ -70,7 +70,7 @@ pub fn update_root_dir(new_path: String) -> Result<AppConfig, String> {
 }
 
 #[tauri::command]
-pub fn list_recent_atoms(limit: usize) -> Result<Vec<ClaraFrontmatter>, String> {
+pub fn list_recent_atoms(limit: usize) -> Result<Vec<ClaraFrontmatter>, crate::error::AppError> {
     let app_config = load_app_config().map_err(|e| e.to_string())?;
     let atoms_dir = get_atoms_dir(&app_config.root_dir);
 
@@ -110,7 +110,7 @@ pub fn list_recent_atoms(limit: usize) -> Result<Vec<ClaraFrontmatter>, String> 
 }
 
 #[tauri::command]
-pub fn load_atom(id: String) -> Result<ClaraAtom, String> {
+pub fn load_atom(id: String) -> Result<ClaraAtom, crate::error::AppError> {
     let app_config = load_app_config().map_err(|e| e.to_string())?;
     let atoms_dir = get_atoms_dir(&app_config.root_dir);
 
@@ -150,7 +150,7 @@ pub fn load_atom(id: String) -> Result<ClaraAtom, String> {
 }
 
 #[tauri::command]
-pub fn get_clara_config() -> Result<ClaraConfig, String> {
+pub fn get_clara_config() -> Result<ClaraConfig, crate::error::AppError> {
     let (_, clara_config) = init_workspace().map_err(|e| e.to_string())?;
     Ok(clara_config)
 }
@@ -160,7 +160,7 @@ pub fn update_clara_config(
     cli_command: String,
     model: Option<String>,
     working_dir: Option<String>,
-) -> Result<ClaraConfig, String> {
+) -> Result<ClaraConfig, crate::error::AppError> {
     if cli_command.trim().is_empty() {
         return Err("CLIコマンド名は必須です。空欄にできません。".into());
     }
@@ -218,7 +218,7 @@ pub fn update_clara_config(
 }
 
 #[tauri::command]
-pub fn remove_workspace_history(path: String) -> Result<ClaraConfig, String> {
+pub fn remove_workspace_history(path: String) -> Result<ClaraConfig, crate::error::AppError> {
     let (_, mut clara_config) = init_workspace().map_err(|e| e.to_string())?;
     clara_config.workspace_history.retain(|x| x != &path);
     let config_path = get_config_path();
@@ -234,7 +234,7 @@ pub async fn create_and_send_prompt(
     prompt: String,
     parent_id: Option<String>,
     yolo: bool,
-) -> Result<ClaraAtom, String> {
+) -> Result<ClaraAtom, crate::error::AppError> {
     let (app_config, config) = init_workspace().map_err(|e| e.to_string())?;
 
     let now = Utc::now();
@@ -296,7 +296,7 @@ pub async fn create_and_send_prompt(
 pub fn search_skr(
     app_handle: tauri::AppHandle,
     query: String,
-) -> Result<Vec<SkrSearchResult>, String> {
+) -> Result<Vec<SkrSearchResult>, crate::error::AppError> {
     let (app_config, _) = init_workspace().map_err(|e| e.to_string())?;
 
     let atoms_dir = get_atoms_dir(&app_config.root_dir);
@@ -308,4 +308,39 @@ pub fn search_skr(
 
     let results = state_inner.search(&query, &atoms_dir, &cache_path)?;
     Ok(results)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::error::AppError;
+
+    #[test]
+    fn test_update_root_dir_empty() {
+        let result: Result<crate::config::AppConfig, AppError> = update_root_dir("   ".to_string());
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert_eq!(err.to_string(), "Vaultのパスを指定してください。");
+    }
+
+    #[test]
+    fn test_update_clara_config_empty_command() {
+        let result: Result<crate::config::ClaraConfig, AppError> = update_clara_config("   ".to_string(), None, None);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert_eq!(err.to_string(), "CLIコマンド名は必須です。空欄にできません。");
+    }
+
+    #[test]
+    fn test_type_signatures() {
+        // This test ensures that all these functions return a Result<_, AppError>.
+        // If they return Result<_, String>, this test will fail to compile (RED).
+        let _f1: fn() -> Result<crate::config::AppConfig, AppError> = get_app_config;
+        let _f2: fn(usize) -> Result<Vec<crate::models::ClaraFrontmatter>, AppError> = list_recent_atoms;
+        let _f3: fn(String) -> Result<crate::models::ClaraAtom, AppError> = load_atom;
+        let _f4: fn() -> Result<crate::config::ClaraConfig, AppError> = get_clara_config;
+        let _f5: fn(String) -> Result<crate::config::ClaraConfig, AppError> = remove_workspace_history;
+        // create_and_send_prompt is async, so its type is complex. We'll skip it in this dummy check.
+        // search_skr takes tauri::AppHandle which we can't easily dummy, skip.
+    }
 }
