@@ -172,9 +172,7 @@ pub fn update_clara_config(
                 .map(|c| format!("'{c}'"))
                 .collect::<Vec<_>>()
                 .join(", ");
-            return Err(
-                format!("CLIコマンドは {} のみを許可しています。", allowed_str).into(),
-            );
+            return Err(format!("CLIコマンドは {} のみを許可しています。", allowed_str).into());
         }
     } else {
         return Err("無効なCLIコマンドです。".into());
@@ -362,7 +360,6 @@ mod tests {
             "Workspaceディレクトリは必須です。空欄にできません。"
         );
     }
-
 
     #[test]
     fn test_type_signatures() {
