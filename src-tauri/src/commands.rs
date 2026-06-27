@@ -165,9 +165,15 @@ pub fn update_clara_config(
 
     let cmd_path = std::path::Path::new(&cli_command);
     if let Some(name) = cmd_path.file_name().and_then(|n| n.to_str()) {
-        if !["gemini", "gemini-cli", "deba", "agy"].contains(&name) {
+        let allowed_commands = ["gemini", "gemini-cli", "deba", "agy"];
+        if !allowed_commands.contains(&name) {
+            let allowed_str = allowed_commands
+                .iter()
+                .map(|c| format!("'{c}'"))
+                .collect::<Vec<_>>()
+                .join(", ");
             return Err(
-                "CLIコマンドは 'gemini', 'gemini-cli', 'deba', 'agy' のみを許可しています。".into(),
+                format!("CLIコマンドは {} のみを許可しています。", allowed_str).into(),
             );
         }
     } else {
