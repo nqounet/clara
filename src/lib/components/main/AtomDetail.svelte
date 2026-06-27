@@ -1,5 +1,16 @@
 <script lang="ts">
   import { atomStore } from "$lib/stores";
+  import { marked } from 'marked';
+  import DOMPurify from 'dompurify';
+
+  // Svelte 5 $derived to parse markdown and sanitize HTML for security (XSS prevention)
+  const streamingResponseHtml = $derived(
+    atomStore.streamingResponse ? DOMPurify.sanitize(marked.parse(atomStore.streamingResponse) as string) : ''
+  );
+
+  const responseHtml = $derived(
+    atomStore.lastAtom?.response ? DOMPurify.sanitize(marked.parse(atomStore.lastAtom.response) as string) : ''
+  );
 </script>
 
 {#if atomStore.isSending}
@@ -11,7 +22,9 @@
     </div>
     <div class="box">
       <h3>AI</h3>
-      <pre>{atomStore.streamingResponse}</pre>
+      <div class="markdown-body">
+        {@html streamingResponseHtml}
+      </div>
     </div>
   </div>
 {:else if atomStore.lastAtom}
@@ -65,7 +78,9 @@
     </div>
     <div class="box">
       <h3>AI</h3>
-      <pre>{atomStore.lastAtom.response}</pre>
+      <div class="markdown-body">
+        {@html responseHtml}
+      </div>
     </div>
   </div>
 {:else}
@@ -196,5 +211,108 @@
     height: 100%;
     color: var(--text-muted);
     font-size: 0.9rem;
+  }
+
+  .markdown-body {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--text-primary);
+  }
+
+  .markdown-body :global(p) {
+    margin-top: 0;
+    margin-bottom: 0.8rem;
+  }
+
+  .markdown-body :global(p:last-child) {
+    margin-bottom: 0;
+  }
+
+  .markdown-body :global(h1),
+  .markdown-body :global(h2),
+  .markdown-body :global(h3),
+  .markdown-body :global(h4) {
+    margin-top: 1.2rem;
+    margin-bottom: 0.6rem;
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--text-primary);
+  }
+
+  .markdown-body :global(h1) { font-size: 1.4rem; border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; }
+  .markdown-body :global(h2) { font-size: 1.2rem; border-bottom: 1px solid var(--border); padding-bottom: 0.2rem; }
+  .markdown-body :global(h3) { font-size: 1.05rem; }
+  .markdown-body :global(h4) { font-size: 0.9rem; }
+
+  .markdown-body :global(ul),
+  .markdown-body :global(ol) {
+    margin-top: 0;
+    margin-bottom: 0.8rem;
+    padding-left: 1.5rem;
+  }
+
+  .markdown-body :global(li) {
+    margin-bottom: 0.25rem;
+  }
+
+  .markdown-body :global(code) {
+    font-family: monospace;
+    font-size: 0.85em;
+    background: var(--bg-elevated);
+    padding: 0.15rem 0.3rem;
+    border-radius: 3px;
+    color: var(--text-primary);
+  }
+
+  .markdown-body :global(pre) {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    padding: 0.8rem;
+    border-radius: 4px;
+    margin-top: 0;
+    margin-bottom: 0.8rem;
+    overflow-x: auto;
+  }
+
+  .markdown-body :global(pre code) {
+    background: none;
+    padding: 0;
+    font-size: 0.85rem;
+    border-radius: 0;
+    color: inherit;
+  }
+
+  .markdown-body :global(blockquote) {
+    margin: 0 0 0.8rem;
+    padding: 0 1rem;
+    color: var(--text-secondary);
+    border-left: 0.25rem solid var(--border);
+  }
+
+  .markdown-body :global(a) {
+    color: var(--accent-blue);
+    text-decoration: none;
+  }
+
+  .markdown-body :global(a:hover) {
+    text-decoration: underline;
+  }
+
+  .markdown-body :global(table) {
+    border-collapse: collapse;
+    width: 100%;
+    margin-bottom: 0.8rem;
+    font-size: 0.85rem;
+  }
+
+  .markdown-body :global(th),
+  .markdown-body :global(td) {
+    border: 1px solid var(--border);
+    padding: 0.4rem 0.6rem;
+  }
+
+  .markdown-body :global(th) {
+    background: var(--bg-elevated);
+    font-weight: 600;
   }
 </style>
