@@ -10,11 +10,7 @@ impl SearchState {
         Self
     }
 
-    pub fn search(
-        &self,
-        query: &str,
-        atoms_dir: &Path,
-    ) -> Result<Vec<SkrSearchResult>, String> {
+    pub fn search(&self, query: &str, atoms_dir: &Path) -> Result<Vec<SkrSearchResult>, String> {
         let tokens: Vec<String> = query
             .split_whitespace()
             .map(|s| s.to_lowercase())
@@ -40,7 +36,10 @@ impl SearchState {
         let mut matched_results = Vec::new();
 
         for entry in fs::read_dir(atoms_dir).map_err(|e| e.to_string())? {
-            let entry = entry.map_err(|e| e.to_string())?;
+            let entry = match entry {
+                Ok(e) => e,
+                Err(_) => continue,
+            };
             let path = entry.path();
 
             if path.extension().and_then(|s| s.to_str()) != Some("md") {
@@ -52,15 +51,22 @@ impl SearchState {
                 None => continue,
             };
 
-            let metadata = fs::metadata(&path).map_err(|e| e.to_string())?;
-            let modified = metadata
-                .modified()
-                .map_err(|e| e.to_string())?
-                .duration_since(std::time::UNIX_EPOCH)
-                .map_err(|e| e.to_string())?
-                .as_secs();
+            let metadata = match fs::metadata(&path) {
+                Ok(m) => m,
+                Err(_) => continue,
+            };
+            let modified = match metadata.modified() {
+                Ok(mod_time) => match mod_time.duration_since(std::time::UNIX_EPOCH) {
+                    Ok(dur) => dur.as_secs(),
+                    Err(_) => continue,
+                },
+                Err(_) => continue,
+            };
 
-            let content = fs::read_to_string(&path).map_err(|e| e.to_string())?;
+            let content = match fs::read_to_string(&path) {
+                Ok(c) => c,
+                Err(_) => continue,
+            };
             let content_lower = content.to_lowercase();
 
             // AND検索: すべてのトークンが含まれているか
@@ -112,7 +118,8 @@ impl SearchState {
 
         // スコアの降順、スコアが同じなら更新日時の降順でソート
         matched_results.sort_by(|a, b| {
-            b.score.partial_cmp(&a.score)
+            b.score
+                .partial_cmp(&a.score)
                 .unwrap_or(std::cmp::Ordering::Equal)
                 .then_with(|| b.modified.cmp(&a.modified))
         });
@@ -182,7 +189,8 @@ mod tests {
     impl TestDir {
         fn new() -> Self {
             let counter = TEST_DIR_COUNTER.fetch_add(1, Ordering::SeqCst);
-            let path = std::env::temp_dir().join(format!("clara_test_{}_{}", std::process::id(), counter));
+            let path =
+                std::env::temp_dir().join(format!("clara_test_{}_{}", std::process::id(), counter));
             fs::create_dir_all(&path).unwrap();
             Self { path }
         }
