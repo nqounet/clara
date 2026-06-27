@@ -228,7 +228,6 @@ pub fn remove_workspace_history(path: String) -> Result<ClaraConfig, crate::erro
 #[tauri::command]
 pub async fn create_and_send_prompt(
     window: tauri::Window,
-    description: Option<String>,
     prompt: String,
     parent_id: Option<String>,
     yolo: bool,
@@ -257,7 +256,7 @@ pub async fn create_and_send_prompt(
 
     let frontmatter = ClaraFrontmatter {
         title: parsed.title.clone(),
-        description: description.or(parsed.description),
+        description: parsed.description,
         id: full_id.clone(),
         parent_id: parent_id.clone(),
         parent: parent_id.as_ref().map(|pid| format!("[[{}]]", pid)),
