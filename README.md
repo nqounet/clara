@@ -14,7 +14,7 @@
 
 ---
 
-## � 用語定義 (Terminology)
+## 📖 用語定義 (Terminology)
 
 * **Atom (アトム)**: CLARAにおける「1回のやり取り（ユーザーの送信とAIの返信）」の単位。独立した1つのMarkdownファイルとして保存されます。
 * **Vault (ボールト)**: Atom（Markdownファイル群）が保存・蓄積されるローカルの保管場所。
@@ -22,7 +22,7 @@
 
 ---
 
-## �🚀 コア・アーキテクチャ
+## 🚀 コア・アーキテクチャ
 
 ### 1. 1Atom = 1 Markdownファイル
 
@@ -37,11 +37,13 @@
 AIには **「今回送信するメッセージ」と「明示的に指定した親Atom（Markdownの内容）」のみ** を送信します。
 
 * 過去の履歴を自動でダラダラと送ることは一切しません。
-* 「あの件の続き」を話したい時は、SKRで過去のMarkdownを検索し、そのIDを「親」として指定するだけです。
+* 「あの件の続き」を話したい時は、ローカルのGrep検索で過去のMarkdownを検索し、そのIDを「親」として指定するだけです。
 
-### 3. SKR（セマンティック・ナレッジ・リポジトリ）の役割（※開発中）
+### 3. オンデマンドGrep検索の役割
 
-ローカルのMarkdownファイル群を常にインデックス化し、ユーザーからの「あの設定どこだっけ？」という検索要求に対して、該当のファイルパス（またはID）を即座に返す、純粋な「検索エンジン」として機能させる予定です（現在、順次実装中）。
+外部データベースや事前のインデックス作成なしで、ローカルのMarkdownファイル群を高速に走査するオンデマンドのGrep検索を行います。
+* 複数キーワードによる AND 検索、出現回数に応じたスコア判定、マッチした行のスニペット抽出を行います。
+* 外部APIや追加のデータベースファイル（ベクトルDBなど）に依存しないため、非常に軽量でプライバシーに配慮された検索が可能です。
 
 ---
 
@@ -51,13 +53,13 @@ AIには **「今回送信するメッセージ」と「明示的に指定した
 sequenceDiagram
     actor User
     participant CLI_GUI as "CLARA アプリ (フロントエンド)"
-    participant SKR as "SKR (ローカル検索)"
+    participant Search as "ローカル検索 (Grep)"
     participant Files as "Markdown (Obsidian Vault)"
     participant AI as "AI API"
 
     User->>CLI_GUI: "あのスキルの話の続きを作りたい"
-    CLI_GUI->>SKR: "検索: スキル作成の話題"
-    SKR-->>CLI_GUI: "該当ファイル: 20260306-skill.md"
+    CLI_GUI->>Search: "検索: スキル作成の話題"
+    Search-->>CLI_GUI: "該当ファイル: 20260306-skill.md"
     User->>CLI_GUI: "親Atomを指定して新メッセージを入力・送信"
     Note over User,CLI_GUI: "※確定エンターは無効化、明示的送信アクションのみ"
 
@@ -66,6 +68,5 @@ sequenceDiagram
     AI-->>CLI_GUI: "AIの回答"
 
     CLI_GUI->>Files: "新しいAtomをMarkdownで保存 (親IDを記録)"
-    CLI_GUI->>SKR: "新ファイルをインデックスに追加"
     CLI_GUI-->>User: "画面表示を更新"
 ```
