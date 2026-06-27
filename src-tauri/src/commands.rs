@@ -27,7 +27,7 @@ use tauri::Manager;
 
 #[tauri::command]
 pub fn get_app_config() -> Result<AppConfig, crate::error::AppError> {
-    load_app_config().map_err(|e| format!("設定の読み込みに失敗しました: {}", e).into())
+    load_app_config()
 }
 
 #[tauri::command]
@@ -53,25 +53,24 @@ pub fn update_root_dir(new_path: String) -> Result<AppConfig, crate::error::AppE
         }
     }
 
-    let mut config = load_app_config().map_err(|e| format!("設定の読み込みに失敗: {}", e))?;
+    let mut config = load_app_config()?;
 
     config.root_dir = normalized_path.clone();
 
     if !normalized_path.exists() {
-        fs::create_dir_all(&normalized_path)
-            .map_err(|e| format!("ディレクトリの作成に失敗: {}", e))?;
+        fs::create_dir_all(&normalized_path)?;
     }
 
     let config_path = get_global_settings_path();
-    let json = serde_json::to_string_pretty(&config).map_err(|e| e.to_string())?;
-    fs::write(&config_path, json).map_err(|e| format!("設定の保存に失敗: {}", e))?;
+    let json = serde_json::to_string_pretty(&config)?;
+    fs::write(&config_path, json)?;
 
     Ok(config)
 }
 
 #[tauri::command]
 pub fn list_recent_atoms(limit: usize) -> Result<Vec<ClaraFrontmatter>, crate::error::AppError> {
-    let app_config = load_app_config().map_err(|e| e.to_string())?;
+    let app_config = load_app_config()?;
     let atoms_dir = get_atoms_dir(&app_config.root_dir);
 
     if !atoms_dir.exists() {
@@ -79,7 +78,7 @@ pub fn list_recent_atoms(limit: usize) -> Result<Vec<ClaraFrontmatter>, crate::e
     }
 
     let mut frontmatters = Vec::new();
-    let entries = fs::read_dir(atoms_dir).map_err(|e| e.to_string())?;
+    let entries = fs::read_dir(atoms_dir)?;
 
     for entry_result in entries {
         match entry_result {
@@ -111,25 +110,24 @@ pub fn list_recent_atoms(limit: usize) -> Result<Vec<ClaraFrontmatter>, crate::e
 
 #[tauri::command]
 pub fn load_atom(id: String) -> Result<ClaraAtom, crate::error::AppError> {
-    let app_config = load_app_config().map_err(|e| e.to_string())?;
+    let app_config = load_app_config()?;
     let atoms_dir = get_atoms_dir(&app_config.root_dir);
 
-    let entries = fs::read_dir(atoms_dir).map_err(|e| e.to_string())?;
+    let entries = fs::read_dir(atoms_dir)?;
     for entry_result in entries {
         match entry_result {
             Ok(entry) => {
                 let path = entry.path();
                 if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
                     if file_name.starts_with(&id) && file_name.ends_with(".md") {
-                        let content = fs::read_to_string(&path).map_err(|e| e.to_string())?;
+                        let content = fs::read_to_string(&path)?;
 
                         let parts: Vec<&str> = content.splitn(3, "---").collect();
                         if parts.len() < 3 {
                             return Err("ファイルフォーマットが不正です".into());
                         }
 
-                        let frontmatter: ClaraFrontmatter =
-                            serde_yaml::from_str(parts[1].trim()).map_err(|e| e.to_string())?;
+                        let frontmatter: ClaraFrontmatter = serde_yaml::from_str(parts[1].trim())?;
                         let body = parts[2];
 
                         let (prompt, response) = parse_atom_body(body);
@@ -151,7 +149,7 @@ pub fn load_atom(id: String) -> Result<ClaraAtom, crate::error::AppError> {
 
 #[tauri::command]
 pub fn get_clara_config() -> Result<ClaraConfig, crate::error::AppError> {
-    let (_, clara_config) = init_workspace().map_err(|e| e.to_string())?;
+    let (_, clara_config) = init_workspace()?;
     Ok(clara_config)
 }
 
@@ -196,7 +194,7 @@ pub fn update_clara_config(
     }
     let safe_working_dir = Some(normalized_path.clone());
 
-    let (_, mut clara_config) = init_workspace().map_err(|e| e.to_string())?;
+    let (_, mut clara_config) = init_workspace()?;
 
     clara_config.cli_command = cli_command;
     clara_config.model = model.filter(|s| !s.trim().is_empty());
@@ -211,19 +209,19 @@ pub fn update_clara_config(
     }
 
     let config_path = get_config_path();
-    let json = serde_json::to_string_pretty(&clara_config).map_err(|e| e.to_string())?;
-    fs::write(&config_path, json).map_err(|e| format!("設定の保存に失敗: {}", e))?;
+    let json = serde_json::to_string_pretty(&clara_config)?;
+    fs::write(&config_path, json)?;
 
     Ok(clara_config)
 }
 
 #[tauri::command]
 pub fn remove_workspace_history(path: String) -> Result<ClaraConfig, crate::error::AppError> {
-    let (_, mut clara_config) = init_workspace().map_err(|e| e.to_string())?;
+    let (_, mut clara_config) = init_workspace()?;
     clara_config.workspace_history.retain(|x| x != &path);
     let config_path = get_config_path();
-    let json = serde_json::to_string_pretty(&clara_config).map_err(|e| e.to_string())?;
-    fs::write(&config_path, json).map_err(|e| format!("設定の保存に失敗: {}", e))?;
+    let json = serde_json::to_string_pretty(&clara_config)?;
+    fs::write(&config_path, json)?;
     Ok(clara_config)
 }
 
@@ -235,7 +233,7 @@ pub async fn create_and_send_prompt(
     parent_id: Option<String>,
     yolo: bool,
 ) -> Result<ClaraAtom, crate::error::AppError> {
-    let (app_config, config) = init_workspace().map_err(|e| e.to_string())?;
+    let (app_config, config) = init_workspace()?;
 
     let now = Utc::now();
     let id = now.format("%Y%m%d%H%M%S").to_string();
@@ -274,7 +272,7 @@ pub async fn create_and_send_prompt(
         yolo,
     };
 
-    let yaml = serde_yaml::to_string(&frontmatter).map_err(|e| e.to_string())?;
+    let yaml = serde_yaml::to_string(&frontmatter)?;
 
     let markdown_content = format!(
         "---\n{}---\n\n~~~~~~user\n{}\n~~~~~~\n\n~~~~~~ai\n{}\n~~~~~~",
@@ -283,7 +281,7 @@ pub async fn create_and_send_prompt(
 
     let mut file_path = get_atoms_dir(&app_config.root_dir);
     file_path.push(format!("{}.md", full_id));
-    fs::write(&file_path, markdown_content).map_err(|e| e.to_string())?;
+    fs::write(&file_path, markdown_content)?;
 
     Ok(ClaraAtom {
         frontmatter,
@@ -297,7 +295,7 @@ pub fn search_skr(
     app_handle: tauri::AppHandle,
     query: String,
 ) -> Result<Vec<SkrSearchResult>, crate::error::AppError> {
-    let (app_config, _) = init_workspace().map_err(|e| e.to_string())?;
+    let (app_config, _) = init_workspace()?;
 
     let atoms_dir = get_atoms_dir(&app_config.root_dir);
     let cache_path = app_config.root_dir.join(".clara").join("embeddings.json");
@@ -325,10 +323,14 @@ mod tests {
 
     #[test]
     fn test_update_clara_config_empty_command() {
-        let result: Result<crate::config::ClaraConfig, AppError> = update_clara_config("   ".to_string(), None, None);
+        let result: Result<crate::config::ClaraConfig, AppError> =
+            update_clara_config("   ".to_string(), None, None);
         assert!(result.is_err());
         let err = result.unwrap_err();
-        assert_eq!(err.to_string(), "CLIコマンド名は必須です。空欄にできません。");
+        assert_eq!(
+            err.to_string(),
+            "CLIコマンド名は必須です。空欄にできません。"
+        );
     }
 
     #[test]
@@ -336,10 +338,12 @@ mod tests {
         // This test ensures that all these functions return a Result<_, AppError>.
         // If they return Result<_, String>, this test will fail to compile (RED).
         let _f1: fn() -> Result<crate::config::AppConfig, AppError> = get_app_config;
-        let _f2: fn(usize) -> Result<Vec<crate::models::ClaraFrontmatter>, AppError> = list_recent_atoms;
+        let _f2: fn(usize) -> Result<Vec<crate::models::ClaraFrontmatter>, AppError> =
+            list_recent_atoms;
         let _f3: fn(String) -> Result<crate::models::ClaraAtom, AppError> = load_atom;
         let _f4: fn() -> Result<crate::config::ClaraConfig, AppError> = get_clara_config;
-        let _f5: fn(String) -> Result<crate::config::ClaraConfig, AppError> = remove_workspace_history;
+        let _f5: fn(String) -> Result<crate::config::ClaraConfig, AppError> =
+            remove_workspace_history;
         // create_and_send_prompt is async, so its type is complex. We'll skip it in this dummy check.
         // search_skr takes tauri::AppHandle which we can't easily dummy, skip.
     }

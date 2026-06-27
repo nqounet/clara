@@ -677,7 +677,7 @@ mod tests {
         let values: Vec<String> = (0..20).map(|i| format!("word{} common", i)).collect();
         let documents: HashMap<&str, String> = keys
             .iter()
-            .zip(values.into_iter())
+            .zip(values)
             .map(|(k, v)| (k.as_str(), v))
             .collect();
         let results = bm25_search(

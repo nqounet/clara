@@ -5,6 +5,10 @@ use thiserror::Error;
 pub enum AppError {
     #[error("I/O Error: {0}")]
     IoError(#[from] std::io::Error),
+    #[error("JSON Error: {0}")]
+    SerdeJson(#[from] serde_json::Error),
+    #[error("YAML Error: {0}")]
+    SerdeYaml(#[from] serde_yaml::Error),
     #[error("{0}")]
     Message(String),
 }
@@ -36,9 +40,12 @@ mod tests {
 
     #[test]
     fn test_error_conversion() {
-        let err = AppError::IoError(std::io::Error::new(std::io::ErrorKind::NotFound, "not found"));
+        let err = AppError::IoError(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "not found",
+        ));
         assert_eq!(err.to_string(), "I/O Error: not found");
-        
+
         let json = serde_json::to_string(&err).unwrap();
         assert_eq!(json, "\"I/O Error: not found\"");
     }
