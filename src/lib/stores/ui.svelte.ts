@@ -8,7 +8,7 @@ export class UiStore {
   theme = $state<Theme>('dark');
 
   constructor() {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
       const saved = localStorage.getItem('clara-theme') as Theme | null;
       if (saved === 'dark' || saved === 'light') {
         this.theme = saved;
@@ -19,7 +19,7 @@ export class UiStore {
 
   toggleTheme() {
     this.theme = this.theme === 'dark' ? 'light' : 'dark';
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
       document.body.dataset.theme = this.theme;
       localStorage.setItem('clara-theme', this.theme);
     }
