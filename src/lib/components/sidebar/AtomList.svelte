@@ -1,142 +1,176 @@
 <script lang="ts">
   import { atomStore, searchStore } from "$lib/stores";
+
+  let stripEl: HTMLDivElement;
+
+  function handleWheel(e: WheelEvent) {
+    if (stripEl && Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+      e.preventDefault();
+      stripEl.scrollLeft += e.deltaY;
+    }
+  }
 </script>
 
-<div class="atom-list-section">
+<div class="atom-strip-section">
   {#if searchStore.hasSearched}
-    <h3>検索結果 ({searchStore.searchResults.length}件)</h3>
+    <span class="strip-label">検索結果 ({searchStore.searchResults.length})</span>
     {#if searchStore.searchResults.length === 0 && !searchStore.isSearching}
-      <p class="empty-msg">一致するAtomが見つかりませんでした</p>
+      <span class="empty-msg">一致なし</span>
     {:else}
-      <ul class="recent-list">
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div class="atom-strip" bind:this={stripEl} onwheel={handleWheel}>
         {#each searchStore.searchResults as atom}
-          <li>
-            <button
-              class="atom-btn"
-              class:atom-btn-active={atomStore.lastAtom?.frontmatter.id === atom.id}
-              onclick={() => atomStore.loadAtom(atom.id)}
-            >
-              <span class="atom-title">{atom.title}</span>
-              {#if atom.snippet}
-                <span class="atom-desc">{atom.snippet}</span>
-              {/if}
-              <div class="atom-meta">
-                <span class="atom-id">{atom.id.includes('-') ? atom.id.split('-')[0] : atom.id}</span>
-                <span class="atom-score" title="類似度スコア">Score: {atom.score.toFixed(3)}</span>
-              </div>
-            </button>
-          </li>
+          <button
+            class="atom-card"
+            class:atom-card-active={atomStore.lastAtom?.frontmatter.id === atom.id}
+            onclick={() => atomStore.loadAtom(atom.id)}
+          >
+            <span class="atom-title">{atom.title}</span>
+            {#if atom.snippet}
+              <span class="atom-desc">{atom.snippet}</span>
+            {/if}
+            <div class="atom-meta">
+              <span class="atom-id">{atom.id.includes('-') ? atom.id.split('-')[0] : atom.id}</span>
+              <span class="atom-score">Score: {atom.score.toFixed(3)}</span>
+            </div>
+          </button>
         {/each}
-      </ul>
+      </div>
     {/if}
   {:else}
-    <h3>過去の思考 (Atom)</h3>
+    <span class="strip-label">Atoms</span>
     {#if atomStore.isLoadingRecent}
-      <p class="empty-msg">読み込み中...</p>
+      <span class="empty-msg">読み込み中...</span>
     {:else if atomStore.recentAtoms.length === 0}
-      <p class="empty-msg">まだ履歴がありません</p>
+      <span class="empty-msg">履歴なし</span>
     {:else}
-      <ul class="recent-list">
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div class="atom-strip" bind:this={stripEl} onwheel={handleWheel}>
         {#each atomStore.recentAtoms as atom}
-          <li>
-            <button
-              class="atom-btn"
-              class:atom-btn-active={atomStore.lastAtom?.frontmatter.id === atom.id}
-              onclick={() => atomStore.loadAtom(atom.id)}
-            >
-              <span class="atom-title">{atom.title}</span>
-              <span class="atom-id">{atom.id.includes('-') ? atom.id.split('-')[0] : atom.id}</span>
-            </button>
-          </li>
+          <button
+            class="atom-card"
+            class:atom-card-active={atomStore.lastAtom?.frontmatter.id === atom.id}
+            onclick={() => atomStore.loadAtom(atom.id)}
+          >
+            <span class="atom-title">{atom.title}</span>
+            <span class="atom-id">{atom.id.includes('-') ? atom.id.split('-')[0] : atom.id}</span>
+          </button>
         {/each}
-      </ul>
+      </div>
     {/if}
   {/if}
 </div>
 
 <style>
-  .atom-list-section {
+  .atom-strip-section {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 1rem;
+    background: var(--bg-surface);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  .strip-label {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    flex-shrink: 0;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .atom-strip {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
     flex: 1;
-    overflow-y: auto;
-    padding: 0.75rem 1rem;
+    padding: 0.25rem 0;
   }
 
-  .atom-list-section h3 {
-    margin: 0 0 0.5rem;
-    font-size: 0.85rem;
-    color: #555;
-    border-bottom: 1px solid #ddd;
-    padding-bottom: 0.4rem;
+  .atom-strip::-webkit-scrollbar {
+    height: 4px;
   }
 
-  .recent-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
+  .atom-strip::-webkit-scrollbar-track {
+    background: transparent;
   }
 
-  .recent-list li {
-    margin-bottom: 0.35rem;
+  .atom-strip::-webkit-scrollbar-thumb {
+    background: var(--bg-elevated);
+    border-radius: 2px;
   }
 
-  .atom-btn {
-    width: 100%;
-    text-align: left;
-    background: white;
-    border: 1px solid #e0e0e0;
-    border-radius: 4px;
+  .atom-strip::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-hover);
+  }
+
+  .atom-card {
+    flex-shrink: 0;
+    width: 180px;
+    scroll-snap-align: start;
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    border-radius: 6px;
     padding: 0.4rem 0.5rem;
+    color: var(--text-primary);
     cursor: pointer;
-    transition: background 0.15s;
+    transition: all 0.15s;
     display: flex;
     flex-direction: column;
+    gap: 0.15rem;
+    text-align: left;
   }
 
-  .atom-btn:hover {
-    background: #e1ecf4;
-    border-color: #0366d6;
+  .atom-card:hover {
+    background: var(--bg-elevated);
+    border-color: var(--accent-blue);
   }
 
-  .atom-btn-active {
-    background: #e1ecf4;
-    border-color: #0366d6;
-    border-left: 3px solid #0366d6;
+  .atom-card-active {
+    background: var(--accent-blue-bg);
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 8px var(--atom-active-shadow);
   }
 
   .atom-title {
     font-weight: 600;
-    font-size: 0.8rem;
-    color: #333;
-    margin-bottom: 0.1rem;
+    font-size: 0.75rem;
+    color: var(--text-primary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    width: 100%;
   }
 
   .atom-meta {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: 0.2rem;
   }
 
   .atom-id {
-    font-size: 0.65rem;
-    color: #999;
+    font-size: 0.6rem;
+    color: var(--text-muted);
   }
 
   .atom-score {
     font-size: 0.6rem;
-    color: #0366d6;
-    background: #e1ecf4;
+    color: var(--accent-blue);
+    background: var(--accent-blue-bg);
     padding: 0.1rem 0.3rem;
     border-radius: 3px;
     font-family: monospace;
   }
 
   .atom-desc {
-    font-size: 0.7rem;
-    color: #666;
+    font-size: 0.65rem;
+    color: var(--text-secondary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -144,7 +178,8 @@
   }
 
   .empty-msg {
-    color: #999;
-    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    white-space: nowrap;
   }
 </style>

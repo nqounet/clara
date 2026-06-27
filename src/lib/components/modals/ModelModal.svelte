@@ -20,7 +20,7 @@
 <style>
   .modal-desc {
     font-size: 0.8rem;
-    color: #888;
+    color: var(--text-secondary);
     margin: 0 0 0.75rem;
     line-height: 1.4;
   }
@@ -28,7 +28,9 @@
   input[type="text"] {
     width: 100%;
     padding: 0.45rem 0.6rem;
-    border: 1px solid #ccc;
+    background: var(--bg-base);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
     border-radius: 6px;
     box-sizing: border-box;
     font-size: 0.85rem;
@@ -37,8 +39,8 @@
 
   input[type="text"]:focus {
     outline: none;
-    border-color: #0366d6;
-    box-shadow: 0 0 0 2px rgba(3, 102, 214, 0.15);
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
   }
 
   .modal-actions {
@@ -50,8 +52,8 @@
 
   .modal-cancel {
     background: transparent;
-    border: 1px solid #ccc;
-    color: #666;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
     padding: 0.35rem 0.8rem;
     border-radius: 6px;
     cursor: pointer;
@@ -60,12 +62,13 @@
   }
 
   .modal-cancel:hover {
-    background: #f0f0f0;
+    background: var(--bg-elevated);
+    color: var(--text-primary);
   }
 
   .modal-save {
-    background: #0366d6;
-    color: white;
+    background: var(--accent-blue);
+    color: var(--text-primary);
     border: none;
     padding: 0.35rem 0.8rem;
     border-radius: 6px;
@@ -75,16 +78,17 @@
   }
 
   .modal-save:hover:not(:disabled) {
-    background: #0256b9;
+    filter: brightness(90%);
   }
 
   .modal-save:disabled {
-    background: #a0c4e8;
+    background: var(--bg-elevated);
+    color: var(--text-muted);
     cursor: not-allowed;
   }
 
   .settings-msg {
-    color: #28a745;
+    color: var(--accent-green);
     font-weight: 600;
     font-size: 0.78rem;
     margin: 0.35rem 0 0;
@@ -92,6 +96,6 @@
   }
 
   .settings-msg-error {
-    color: #e53e3e;
+    color: var(--accent-red);
   }
 </style>

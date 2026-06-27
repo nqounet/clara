@@ -55,9 +55,9 @@
   }
 
   .font-btn {
-    background: #e8ebee;
-    border: 1px solid #ccc;
-    color: #555;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
     padding: 0.1rem 0.35rem;
     border-radius: 3px;
     cursor: pointer;
@@ -68,12 +68,13 @@
   }
 
   .font-btn:hover {
-    background: #ddd;
+    background: var(--scrollbar-hover);
+    color: var(--text-primary);
   }
 
   .font-size-label {
     font-size: 0.65rem;
-    color: #888;
+    color: var(--text-muted);
     min-width: 2.5rem;
     text-align: center;
   }
@@ -87,8 +88,8 @@
 
   .cli-info-btn {
     font-size: 0.65rem;
-    color: #888;
-    background: #f0f0f0;
+    color: var(--text-secondary);
+    background: var(--bg-elevated);
     padding: 0.15rem 0.45rem;
     border-radius: 12px;
     font-family: monospace;
@@ -99,13 +100,13 @@
   }
 
   .cli-info-btn:hover {
-    background: #e1ecf4;
-    color: #0366d6;
-    border-color: #0366d6;
+    background: var(--accent-blue-bg);
+    color: var(--accent-blue);
+    border-color: var(--accent-blue);
   }
 
   .status-indicator {
-    color: #0366d6;
+    color: var(--accent-green);
     font-size: 0.7rem;
     animation: blink 1.5s infinite;
   }
@@ -115,33 +116,36 @@
   }
 
   .send-btn {
-    background: #007bff;
-    color: white;
+    background: var(--accent-green);
+    color: var(--bg-base);
     border: none;
     padding: 0.3rem 0.8rem;
     border-radius: 4px;
     cursor: pointer;
     font-size: 0.75rem;
+    font-weight: 600;
     white-space: nowrap;
     width: auto;
     flex-shrink: 0;
   }
 
   .send-btn:disabled {
-    background: #ccc;
+    background: var(--bg-elevated);
+    color: var(--text-muted);
     cursor: not-allowed;
   }
 
   .send-btn:hover:not(:disabled) {
-    background: #0069d9;
+    filter: brightness(90%);
   }
 
   .send-btn-yolo {
-    background: #f59e0b;
+    background: var(--accent-amber);
+    color: var(--bg-base);
   }
 
   .send-btn-yolo:hover:not(:disabled) {
-    background: #d97706;
+    filter: brightness(90%);
   }
 
   .yolo-toggle {
@@ -149,12 +153,12 @@
     align-items: center;
     gap: 0.3rem;
     font-size: 0.7rem;
-    color: #888;
+    color: var(--text-secondary);
     cursor: pointer;
     padding: 0.2rem 0.5rem;
     border-radius: 4px;
-    border: 1px solid #ddd;
-    background: #f8f8f8;
+    border: 1px solid var(--border);
+    background: var(--bg-surface);
     white-space: nowrap;
     transition: all 0.2s;
     user-select: none;
@@ -162,19 +166,19 @@
   }
 
   .yolo-toggle:hover {
-    border-color: #e8a020;
-    color: #b07010;
+    border-color: var(--accent-amber);
+    color: var(--accent-amber);
   }
 
   .yolo-toggle.yolo-active {
-    background: #fff3e0;
-    border-color: #f59e0b;
-    color: #d97706;
+    background: var(--accent-amber-bg);
+    border-color: var(--accent-amber);
+    color: var(--accent-amber);
     font-weight: 600;
   }
 
   .yolo-toggle input[type="checkbox"] {
-    accent-color: #f59e0b;
+    accent-color: var(--accent-amber);
     margin: 0;
     cursor: pointer;
   }

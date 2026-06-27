@@ -70,25 +70,26 @@
   </div>
 {:else}
   <div class="empty-state">
-    <p>左のリストからAtomを選択するか、新しいメッセージを送信してください</p>
+    <p>Atomストリップから選択するか、新しいメッセージを送信してください</p>
   </div>
 {/if}
 
 <style>
   .breadcrumb {
     font-size: 0.8rem;
-    color: #666;
+    color: var(--text-secondary);
     margin-bottom: 0.5rem;
   }
 
   .breadcrumb code {
     font-size: 0.8rem;
+    color: var(--text-primary);
   }
 
   .nav-btn {
-    background: #e1ecf4;
-    color: #0366d6;
-    border: 1px solid #0366d6;
+    background: var(--accent-blue-bg);
+    color: var(--accent-blue);
+    border: 1px solid var(--accent-blue);
     padding: 0.1rem 0.4rem;
     border-radius: 3px;
     cursor: pointer;
@@ -97,21 +98,25 @@
     width: auto;
   }
 
+  .nav-btn:hover {
+    filter: brightness(120%);
+  }
+
   .atom-detail h2 {
     margin: 0 0 0.5rem;
     font-size: 1.05rem;
-    color: #333;
+    color: var(--text-primary);
   }
 
   .id-text {
     font-size: 0.8rem;
-    color: #999;
+    color: var(--text-muted);
     font-weight: normal;
   }
 
   .created-at {
     font-size: 0.75rem;
-    color: #888;
+    color: var(--text-muted);
     margin-bottom: 0.4rem;
   }
 
@@ -121,8 +126,8 @@
 
   .tag {
     display: inline-block;
-    background: #e1ecf4;
-    color: #0366d6;
+    background: var(--accent-blue-bg);
+    color: var(--accent-blue);
     padding: 0.1rem 0.4rem;
     border-radius: 12px;
     font-size: 0.7rem;
@@ -130,11 +135,11 @@
   }
 
   .description {
-    background: #fffbdd;
+    background: var(--accent-amber-bg);
     padding: 0.4rem 0.6rem;
-    border-left: 3px solid #f6e05e;
+    border-left: 3px solid var(--accent-amber);
     font-size: 0.85rem;
-    color: #555;
+    color: var(--text-secondary);
     margin-bottom: 0.5rem;
   }
 
@@ -147,22 +152,22 @@
 
   .exec-meta-item {
     font-size: 0.7rem;
-    color: #666;
-    background: #f0f0f0;
+    color: var(--text-secondary);
+    background: var(--bg-elevated);
     padding: 0.15rem 0.4rem;
     border-radius: 12px;
     font-family: monospace;
   }
 
   .exec-meta-yolo {
-    background: #fff3e0;
-    color: #d97706;
+    background: var(--accent-amber-bg);
+    color: var(--accent-amber);
     font-weight: 600;
   }
 
   .box {
-    background: #f8fafb;
-    border: 1px solid #e8edf1;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
     padding: 0.75rem;
     border-radius: 4px;
     margin-bottom: 0.5rem;
@@ -171,7 +176,7 @@
   .box h3 {
     margin: 0 0 0.4rem;
     font-size: 0.85rem;
-    color: #0366d6;
+    color: var(--accent-blue);
   }
 
   pre {
@@ -181,6 +186,7 @@
     font-family: monospace;
     font-size: 0.85rem;
     line-height: 1.5;
+    color: var(--text-primary);
   }
 
   .empty-state {
@@ -188,7 +194,7 @@
     align-items: center;
     justify-content: center;
     height: 100%;
-    color: #bbb;
+    color: var(--text-muted);
     font-size: 0.9rem;
   }
 </style>

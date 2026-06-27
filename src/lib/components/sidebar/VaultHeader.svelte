@@ -1,58 +1,41 @@
 <script lang="ts">
   import { configStore, uiStore } from "$lib/stores";
+
+  let shortPath = $derived(() => {
+    const full = configStore.rootDir;
+    if (!full) return "読み込み中...";
+    const parts = full.split("/").filter(Boolean);
+    return parts.length > 0 ? parts[parts.length - 1] : full;
+  });
 </script>
 
-<div
-  class="vault-header"
-  role="button"
-  tabindex="0"
+<button
+  class="vault-btn"
   onclick={() => uiStore.openModal('vault')}
-  onkeydown={(e) => e.key === 'Enter' && uiStore.openModal('vault')}
+  title={configStore.rootDir}
 >
-  <div class="vault-label">🏛️ Vault</div>
-  <div class="vault-path" title={configStore.rootDir}>
-    {configStore.rootDir || "読み込み中..."}
-  </div>
-  <div class="vault-hint">クリックして変更</div>
-</div>
+  Vault: {shortPath()}
+</button>
 
 <style>
-  .vault-header {
-    padding: 0.75rem 1rem;
-    border-bottom: 1px solid #ddd;
-    background: #edf0f3;
+  .vault-btn {
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.25rem 0.6rem;
+    font-size: 0.75rem;
     cursor: pointer;
-    transition: background 0.15s;
+    white-space: nowrap;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: background 0.15s, color 0.15s;
+    flex-shrink: 0;
   }
 
-  .vault-header:hover {
-    background: #e0e5ea;
-  }
-
-  .vault-label {
-    font-size: 0.7rem;
-    color: #888;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 0.2rem;
-  }
-
-  .vault-path {
-    font-size: 0.8rem;
-    color: #333;
-    font-weight: 600;
-    word-break: break-all;
-    margin-bottom: 0.25rem;
-    line-height: 1.3;
-  }
-
-  .vault-hint {
-    font-size: 0.65rem;
-    color: #aaa;
-    transition: color 0.15s;
-  }
-
-  .vault-header:hover .vault-hint {
-    color: #0366d6;
+  .vault-btn:hover {
+    background: var(--bg-elevated);
+    color: var(--text-primary);
   }
 </style>
