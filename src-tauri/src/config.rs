@@ -1,3 +1,4 @@
+use crate::error::AppError;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -29,12 +30,12 @@ pub fn get_global_settings_path() -> PathBuf {
     path
 }
 
-pub fn load_app_config() -> std::io::Result<AppConfig> {
+pub fn load_app_config() -> Result<AppConfig, AppError> {
     let config_path = get_global_settings_path();
     if config_path.exists() {
         let content = fs::read_to_string(&config_path)?;
-        serde_json::from_str(&content)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
+        let config = serde_json::from_str(&content)?;
+        Ok(config)
     } else {
         let default_config = AppConfig::default();
         if let Some(parent) = config_path.parent() {
@@ -84,7 +85,7 @@ pub fn get_config_path() -> PathBuf {
 }
 
 /// ディレクトリ構造と設定ファイルの初期化
-pub fn init_workspace() -> std::io::Result<(AppConfig, ClaraConfig)> {
+pub fn init_workspace() -> Result<(AppConfig, ClaraConfig), AppError> {
     let app_config = load_app_config()?;
     let base_dir = &app_config.root_dir;
     let config_path = get_config_path();
@@ -101,8 +102,7 @@ pub fn init_workspace() -> std::io::Result<(AppConfig, ClaraConfig)> {
 
     let clara_config = if config_path.exists() {
         let content = fs::read_to_string(&config_path)?;
-        serde_json::from_str(&content)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?
+        serde_json::from_str(&content)?
     } else {
         let default_config = ClaraConfig::default();
         let json = serde_json::to_string_pretty(&default_config)?;
