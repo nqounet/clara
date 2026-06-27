@@ -1,14 +1,15 @@
 <script lang="ts">
   import { atomStore } from "$lib/stores";
   import { marked } from 'marked';
+  import DOMPurify from 'dompurify';
 
-  // Svelte 5 $derived to parse markdown
+  // Svelte 5 $derived to parse markdown and sanitize HTML for security (XSS prevention)
   const streamingResponseHtml = $derived(
-    atomStore.streamingResponse ? (marked.parse(atomStore.streamingResponse) as string) : ''
+    atomStore.streamingResponse ? DOMPurify.sanitize(marked.parse(atomStore.streamingResponse) as string) : ''
   );
 
   const responseHtml = $derived(
-    atomStore.lastAtom?.response ? (marked.parse(atomStore.lastAtom.response) as string) : ''
+    atomStore.lastAtom?.response ? DOMPurify.sanitize(marked.parse(atomStore.lastAtom.response) as string) : ''
   );
 </script>
 
