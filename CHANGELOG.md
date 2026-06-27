@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file. See [standa
 
 ## [Unreleased]
 
+## [0.4.5] - 2026-06-27T20:03:50+09:00
+
+### Added
+- Render AI response as HTML using marked
+
+### Fixed
+- Sanitize parsed HTML to prevent XSS vulnerability
+
 ## [0.4.4] - 2026-06-27T18:50:16+09:00
 
 ## [0.4.3] - 2026-06-27T18:14:01+09:00
