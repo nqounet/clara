@@ -53,13 +53,13 @@ AIには **「今回送信するメッセージ」と「明示的に指定した
 sequenceDiagram
     actor User
     participant CLI_GUI as "CLARA アプリ (フロントエンド)"
-    participant Backend as "ローカル検索 (Grep)"
+    participant Search as "ローカル検索 (Grep)"
     participant Files as "Markdown (Obsidian Vault)"
     participant AI as "AI API"
 
     User->>CLI_GUI: "あのスキルの話の続きを作りたい"
-    CLI_GUI->>Backend: "検索: スキル作成の話題"
-    Backend-->>CLI_GUI: "該当ファイル: 20260306-skill.md"
+    CLI_GUI->>Search: "検索: スキル作成の話題"
+    Search-->>CLI_GUI: "該当ファイル: 20260306-skill.md"
     User->>CLI_GUI: "親Atomを指定して新メッセージを入力・送信"
     Note over User,CLI_GUI: "※確定エンターは無効化、明示的送信アクションのみ"
 
