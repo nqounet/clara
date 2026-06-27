@@ -165,9 +165,9 @@ pub fn update_clara_config(
 
     let cmd_path = std::path::Path::new(&cli_command);
     if let Some(name) = cmd_path.file_name().and_then(|n| n.to_str()) {
-        if !["gemini", "gemini-cli", "deba"].contains(&name) {
+        if !["gemini", "gemini-cli", "deba", "agy"].contains(&name) {
             return Err(
-                "CLIコマンドは 'gemini', 'gemini-cli', 'deba' のみを許可しています。".into(),
+                "CLIコマンドは 'gemini', 'gemini-cli', 'deba', 'agy' のみを許可しています。".into(),
             );
         }
     } else {
@@ -330,6 +330,33 @@ mod tests {
             "CLIコマンド名は必須です。空欄にできません。"
         );
     }
+    #[test]
+    fn test_update_clara_config_command_validation() {
+        // 許可されていない無効なコマンドはエラーになること
+        let result = update_clara_config("invalid-cli".to_string(), None, None);
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "CLIコマンドは 'gemini', 'gemini-cli', 'deba', 'agy' のみを許可しています。"
+        );
+
+        // 'agy' も許可されるべきなので、コマンドチェックを通過し、次の Workspace チェックでエラーになること
+        let result_agy = update_clara_config("agy".to_string(), None, None);
+        assert!(result_agy.is_err());
+        assert_eq!(
+            result_agy.unwrap_err().to_string(),
+            "Workspaceディレクトリは必須です。空欄にできません。"
+        );
+
+        // 許可されている "gemini" はコマンドチェックを通過し、次の Workspace チェックでエラーになること
+        let result_gemini = update_clara_config("gemini".to_string(), None, None);
+        assert!(result_gemini.is_err());
+        assert_eq!(
+            result_gemini.unwrap_err().to_string(),
+            "Workspaceディレクトリは必須です。空欄にできません。"
+        );
+    }
+
 
     #[test]
     fn test_type_signatures() {
