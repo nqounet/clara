@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file. See [standa
 
 ## [Unreleased]
 
+## [0.4.3] - 2026-06-27T18:14:01+09:00
+
 ## [0.3.1] - 2026-03-18T02:36:30+09:00
 
 ### Added
