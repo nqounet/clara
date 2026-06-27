@@ -64,7 +64,6 @@ export class AtomStore {
 
     try {
       const result: ClaraAtom = await invoke("create_and_send_prompt", {
-        description: null,
         prompt: this.prompt.trim(),
         parentId: this.lastAtom?.frontmatter.id || null,
         yolo: yoloMode,
