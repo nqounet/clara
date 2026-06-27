@@ -298,13 +298,12 @@ pub fn search_skr(
     let (app_config, _) = init_workspace()?;
 
     let atoms_dir = get_atoms_dir(&app_config.root_dir);
-    let cache_path = app_config.root_dir.join(".clara").join("embeddings.json");
 
     let state = app_handle.state::<crate::search::SearchState>();
 
     let state_inner = state.inner();
 
-    let results = state_inner.search(&query, &atoms_dir, &cache_path)?;
+    let results = state_inner.search(&query, &atoms_dir)?;
     Ok(results)
 }
 
