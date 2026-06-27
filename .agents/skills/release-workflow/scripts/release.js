@@ -39,11 +39,27 @@ function updateCargoToml(newVersion) {
   // Replace version under [package]
   content = content.replace(/(\[package\][\s\S]*?^version\s*=\s*")[^"]+(")/m, `$1${newVersion}$2`);
   if (content === oldContent) {
-    // fallback generic replacement
-    content = content.replace(/^version\s*=\s*"[^"]+"/, `version = "${newVersion}"`);
+    // fallback generic replacement (with multiline flag)
+    content = content.replace(/^version\s*=\s*"[^"]+"/m, `version = "${newVersion}"`);
   }
   fs.writeFileSync(cPath, content, 'utf8');
   console.log(`Updated src-tauri/Cargo.toml version to ${newVersion}`);
+}
+
+function updateTauriConf(newVersion) {
+  const tPath = path.join(rootDir, 'src-tauri/tauri.conf.json');
+  if (!fs.existsSync(tPath)) return;
+  try {
+    const t = JSON.parse(fs.readFileSync(tPath, 'utf8'));
+    if (t.package && t.package.version !== undefined) {
+      const oldVersion = t.package.version;
+      t.package.version = newVersion;
+      fs.writeFileSync(tPath, JSON.stringify(t, null, 2) + '\n', 'utf8');
+      console.log(`Updated src-tauri/tauri.conf.json: ${oldVersion} -> ${newVersion}`);
+    }
+  } catch (e) {
+    console.warn(`Failed to update src-tauri/tauri.conf.json: ${e.message}`);
+  }
 }
 
 function updateChangelog(newVersion) {
@@ -63,8 +79,8 @@ function updateChangelog(newVersion) {
   const unreleasedContent = match[2].trim();
   const commitDate = getLatestCommitDate();
   
-  // Prepare new Unreleased and the bumped version section
-  const newSection = `${header}\n\n## [${newVersion}] - ${commitDate}\n\n${unreleasedContent ? unreleasedContent + '\n' : ''}`;
+  // Prepare new Unreleased and the bumped version section with proper spacing
+  const newSection = `${header}\n\n## [${newVersion}] - ${commitDate}\n\n${unreleasedContent ? unreleasedContent + '\n\n' : ''}`;
   
   // Replace the old ## [Unreleased] section
   const updatedContent = content.replace(unreleasedRegex, newSection);
@@ -87,6 +103,7 @@ function main() {
   console.log(`Bumping version from ${currentVersion} to ${newVersion}...`);
 
   updatePackageJson(newVersion);
+  updateTauriConf(newVersion);
   updateCargoToml(newVersion);
   updateChangelog(newVersion);
   

@@ -1,6 +1,6 @@
 ---
 name: release-workflow
-description: Automates the release workflow, including CHANGELOG.md updates, version bumping (package.json, Cargo.toml), lockfile synchronization, committing, and git tagging.
+description: Automates the release workflow, including CHANGELOG.md updates, version bumping (package.json, Cargo.toml, tauri.conf.json), lockfile synchronization, committing, and git tagging.
 ---
 
 # Release Workflow Skill
@@ -26,7 +26,7 @@ description: Automates the release workflow, including CHANGELOG.md updates, ver
 
 ### 3. バージョン更新スクリプトの実行
 ワークスペースのルートディレクトリから、以下のヘルパースクリプトを実行します。
-これにより、`package.json`、`src-tauri/Cargo.toml`、`CHANGELOG.md` のバージョン表記が更新され、ロックファイルが自動で同期されます。
+これにより、`package.json`、`src-tauri/tauri.conf.json`（存在する場合）、`src-tauri/Cargo.toml`、`CHANGELOG.md` のバージョン表記が更新され、ロックファイルが自動で同期されます。
 
 ```bash
 node .agents/skills/release-workflow/scripts/release.js <patch|minor|major|x.y.z>
@@ -41,7 +41,7 @@ npm run check && npm run test && cargo test --manifest-path src-tauri/Cargo.toml
 ### 5. コミットとタグの作成
 変更されたファイルをステージングし、リリース用のコミットを作成します。
 ```bash
-git add package.json package-lock.json CHANGELOG.md src-tauri/Cargo.toml src-tauri/Cargo.lock
+git add package.json package-lock.json CHANGELOG.md src-tauri/Cargo.toml src-tauri/Cargo.lock src-tauri/tauri.conf.json
 git commit -m "chore(release): vX.Y.Z"
 git tag vX.Y.Z
 ```
