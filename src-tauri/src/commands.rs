@@ -241,8 +241,18 @@ pub async fn create_and_send_prompt(
     let now = Utc::now();
     let id = now.format("%Y%m%d%H%M%S").to_string();
 
+    let parent_atom = parent_id
+        .as_ref()
+        .and_then(|pid| match load_atom(pid.clone()) {
+            Ok(atom) => Some(atom),
+            Err(e) => {
+                eprintln!("警告: 親Atom ({}) の読み込みに失敗しました: {}", pid, e);
+                None
+            }
+        });
+
     let system_instruction = "Please generate a title, a short description, a URL-safe slug, and related tags for this request, then provide your answer.\nYou MUST format your output exactly as follows:\n\nTITLE: [Your generated title]\nDESC: [A short summary, or leave empty if not needed]\nSLUG: [lowercase ASCII slug using hyphens only, max 30 chars, e.g. rust-tauri-setup]\nTAGS: [comma-separated tags]\n---\n[Your actual response]\n\n";
-    let full_prompt = format!("{}{}", system_instruction, prompt);
+    let full_prompt = build_prompt(system_instruction, parent_atom.as_ref(), &prompt);
 
     let window_clone = window.clone();
     let config_clone = config.clone();
@@ -310,10 +320,65 @@ pub fn search_skr(
     Ok(results)
 }
 
+pub fn build_prompt(
+    system_instruction: &str,
+    parent_atom: Option<&crate::models::ClaraAtom>,
+    prompt: &str,
+) -> String {
+    match parent_atom {
+        Some(parent) => {
+            format!(
+                "{}Here is the context of the previous conversation. Please read this history to understand the background and reply to the new message accordingly.\n\n[Previous Conversation]\nUser: {}\nAssistant: {}\n\n[New Message]\n{}",
+                system_instruction, parent.prompt, parent.response, prompt
+            )
+        }
+        None => format!("{}{}", system_instruction, prompt),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::error::AppError;
+
+    #[test]
+    fn test_build_prompt_without_parent() {
+        let system_instruction = "System Instruction\n";
+        let prompt = "My prompt";
+        let result = build_prompt(system_instruction, None, prompt);
+        assert_eq!(result, "System Instruction\nMy prompt");
+    }
+
+    #[test]
+    fn test_build_prompt_with_parent() {
+        let system_instruction = "System Instruction\n";
+        let prompt = "My follow up prompt";
+
+        let parent = crate::models::ClaraAtom {
+            frontmatter: crate::models::ClaraFrontmatter {
+                title: "Parent Title".to_string(),
+                description: None,
+                id: "20260706120000-parent".to_string(),
+                parent_id: None,
+                parent: None,
+                created_at: chrono::Utc::now(),
+                tags: vec![],
+                cli_command: Some("gemini".to_string()),
+                model: None,
+                workspace: None,
+                yolo: false,
+            },
+            prompt: "Parent prompt".to_string(),
+            response: "Parent response".to_string(),
+        };
+
+        let result = build_prompt(system_instruction, Some(&parent), prompt);
+
+        let expected = format!(
+            "System Instruction\nHere is the context of the previous conversation. Please read this history to understand the background and reply to the new message accordingly.\n\n[Previous Conversation]\nUser: Parent prompt\nAssistant: Parent response\n\n[New Message]\nMy follow up prompt"
+        );
+        assert_eq!(result, expected);
+    }
 
     #[test]
     fn test_update_root_dir_empty() {
