@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file. See [standa
 
 ## [Unreleased]
 
+## [0.4.7] - 2026-07-07T02:25:57+09:00
+
+### Changed
+- `AGENTS.md` をリファクタリングし、ガイドラインを段階的開示用のドキュメント（`docs/`）に分割
+- `AGENTS.md` 内の絶対リンクを相対パスに変更
+
 ## [0.4.6] - 2026-07-07T01:27:39+09:00
 
 ### Added
