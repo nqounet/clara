@@ -241,15 +241,15 @@ pub async fn create_and_send_prompt(
     let now = Utc::now();
     let id = now.format("%Y%m%d%H%M%S").to_string();
 
-    let parent_atom = parent_id.as_ref().and_then(|pid| {
-        match load_atom(pid.clone()) {
+    let parent_atom = parent_id
+        .as_ref()
+        .and_then(|pid| match load_atom(pid.clone()) {
             Ok(atom) => Some(atom),
             Err(e) => {
                 eprintln!("警告: 親Atom ({}) の読み込みに失敗しました: {}", pid, e);
                 None
             }
-        }
-    });
+        });
 
     let system_instruction = "Please generate a title, a short description, a URL-safe slug, and related tags for this request, then provide your answer.\nYou MUST format your output exactly as follows:\n\nTITLE: [Your generated title]\nDESC: [A short summary, or leave empty if not needed]\nSLUG: [lowercase ASCII slug using hyphens only, max 30 chars, e.g. rust-tauri-setup]\nTAGS: [comma-separated tags]\n---\n[Your actual response]\n\n";
     let full_prompt = build_prompt(system_instruction, parent_atom.as_ref(), &prompt);
@@ -353,7 +353,7 @@ mod tests {
     fn test_build_prompt_with_parent() {
         let system_instruction = "System Instruction\n";
         let prompt = "My follow up prompt";
-        
+
         let parent = crate::models::ClaraAtom {
             frontmatter: crate::models::ClaraFrontmatter {
                 title: "Parent Title".to_string(),
@@ -373,7 +373,7 @@ mod tests {
         };
 
         let result = build_prompt(system_instruction, Some(&parent), prompt);
-        
+
         let expected = format!(
             "System Instruction\nHere is the context of the previous conversation. Please read this history to understand the background and reply to the new message accordingly.\n\n[Previous Conversation]\nUser: Parent prompt\nAssistant: Parent response\n\n[New Message]\nMy follow up prompt"
         );
