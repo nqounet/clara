@@ -241,7 +241,7 @@ pub async fn create_and_send_prompt(
     let now = Utc::now();
     let id = now.format("%Y%m%d%H%M%S").to_string();
 
-    let parent_atom = if let Some(ref pid) = parent_id {
+    let parent_atom = parent_id.as_ref().and_then(|pid| {
         match load_atom(pid.clone()) {
             Ok(atom) => Some(atom),
             Err(e) => {
@@ -249,9 +249,7 @@ pub async fn create_and_send_prompt(
                 None
             }
         }
-    } else {
-        None
-    };
+    });
 
     let system_instruction = "Please generate a title, a short description, a URL-safe slug, and related tags for this request, then provide your answer.\nYou MUST format your output exactly as follows:\n\nTITLE: [Your generated title]\nDESC: [A short summary, or leave empty if not needed]\nSLUG: [lowercase ASCII slug using hyphens only, max 30 chars, e.g. rust-tauri-setup]\nTAGS: [comma-separated tags]\n---\n[Your actual response]\n\n";
     let full_prompt = build_prompt(system_instruction, parent_atom.as_ref(), &prompt);
@@ -327,18 +325,14 @@ pub fn build_prompt(
     parent_atom: Option<&crate::models::ClaraAtom>,
     prompt: &str,
 ) -> String {
-    let mut context = String::new();
-    if let Some(parent) = parent_atom {
-        context = format!(
-            "Here is the context of the previous conversation. Please read this history to understand the background and reply to the new message accordingly.\n\n[Previous Conversation]\nUser: {}\nAssistant: {}\n\n",
-            parent.prompt, parent.response
-        );
-    }
-    
-    if parent_atom.is_some() {
-        format!("{}{}[New Message]\n{}", system_instruction, context, prompt)
-    } else {
-        format!("{}{}", system_instruction, prompt)
+    match parent_atom {
+        Some(parent) => {
+            format!(
+                "{}Here is the context of the previous conversation. Please read this history to understand the background and reply to the new message accordingly.\n\n[Previous Conversation]\nUser: {}\nAssistant: {}\n\n[New Message]\n{}",
+                system_instruction, parent.prompt, parent.response, prompt
+            )
+        }
+        None => format!("{}{}", system_instruction, prompt),
     }
 }
 
