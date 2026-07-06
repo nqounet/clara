@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file. See [standa
 
 ## [Unreleased]
 
+## [0.4.6] - 2026-07-07T01:27:39+09:00
+
+### Added
+- プロンプトのフォーマットに親の会話コンテキストを含める機能を追加
+
+### Fixed
+- レビューコメントに基づくプロンプトビルダーと親アトムローダーの修正・リファクタリング
+- `rustfmt` によるバックエンドコードのフォーマット適用
+
+### Removed
+- `git-push-pr` スキルの削除（ユーザーレベルへの移行に伴うクリーンアップ）
+
 ## [0.4.5] - 2026-06-27T20:03:50+09:00
 
 ### Added
